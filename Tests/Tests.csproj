@@ -13,13 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="KeePass">
-      <HintPath>C:\KeePass-2.50\KeePass.exe</HintPath>
-    </Reference>
+    <ProjectReference Include="..\CertificateMultiAccessProvider\CertificateMultiAccessProvider.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CertificateShortcutProvider\CertificateShortcutProvider.csproj" />
+    <Reference Include="KeePass">
+      <HintPath>C:\Program Files (x86)\KeePass Password Safe 2\KeePass.exe</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Start Keepass": {
+      "commandName": "Executable",
+      "executablePath": "$(TargetDir)KeePass.exe",
+      "commandLineArgs": " -cfg-local:\"F:\\kpdebug\\config\\keepass-debug.config.xml\"",
+      "workingDirectory": "F:\\kpdebug"
+    }
+  }
+}

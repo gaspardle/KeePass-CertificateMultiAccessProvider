@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Start Keepass": {
-      "commandName": "Executable",
-      "executablePath": "$(TargetDir)KeePass.exe"
-    }
-  }
-}

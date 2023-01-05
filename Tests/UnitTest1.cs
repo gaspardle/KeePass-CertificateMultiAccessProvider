@@ -1,10 +1,10 @@
-using NUnit.Framework;
-using CertificateShortcutProvider;
+using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using CertificateMultiAccessProvider;
 using KeePassLib.Security;
 using KeePassLib.Utility;
-using System.Text;
-using System.IO;
+using NUnit.Framework;
 
 namespace Tests
 {
@@ -14,7 +14,7 @@ namespace Tests
     public class Tests
     {
         readonly X509Certificate2 _cert = new X509Certificate2(Path.Combine(TestContext.CurrentContext.TestDirectory, "testCert.p12"), "password");
-        readonly ProtectedString _keepassMasterPassword = new ProtectedString(false, "keepass_master_password");
+        readonly ProtectedBinary _keepassMasterPassword = new ProtectedBinary(false, new byte[] { 0x33, 0x66, 0x99, 0x01, 0x02, 0x03 });
         readonly string _xmlV1 = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <CertificateShortcutProviderKey xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" Version=""1"">
     <Certificate>MIIFozCCA4ugAwIBAgIUJMkuwzE8WhIE0TP6Mw/FHxfptLwwDQYJKoZIhvcNAQELBQAwYDELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEZMBcGA1UEAwwQVGVzdCBDZXJ0aWZpY2F0ZTAgFw0yMjA1MjYxMzA1MjZaGA8yMTIyMDUwMjEzMDUyNlowYDELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEZMBcGA1UEAwwQVGVzdCBDZXJ0aWZpY2F0ZTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAKBA4anlb75kvmQpImHGQNQNtys1Rv/FMNKTGaH7do5HmJx3nzRxyv8eML9Sf1JWALdocnEEVnq0hJdrRZ5S7dHK3MKpSJkEb35s3stpAi3d2HQ5VppD5gtNVC2Wwfr8GN3xVXf53ucJPDVb+TrmV6KTGWfAVdhTSQkXi4iBY5Y4bf71ipOLpuARKPnrTJE3ASZYOklzERHsxV0pbnpbmNTGZ2FxQVbyNMLv7ivlxIwWb+ckzJrnGD4BIlHLMKDu7jbiIFClpgsnf5WxruvACB/50tmTvGjgEerXSadKgNWkgPBuCRsSh/cjH8j4nwVvagJgWWpJwTPoJ0GeeiUVOkY2P7DeT174MFk8iAivpeE6Qn53rD8mCGkrg9+mQjTF6cKtgq/MM9OV4jbXgOhjUUnbCGfH/beW+1DtlmIFahCIoXPlQebsQqmglWWgkVDOyrFqCuYV4cdqr6n/fFq9FJfDy4sw8uuWqHv6M21JiSGdWdpGZ5pr9rmCes2VAp03CuzmQGQ62L5K4yxE+L7J6Qf0yV8On2duqipYpr/LbWBq4ugaGvlAF2UoJFBuRyYIHqyZdtTqS6nrjaGe8GA75SagfFHE+r+H20iTERJFdfFWP0QfUvPhDOl6a9x+jsGwHGQgAO8WeRi75VIrgufkK6po4FA409irc2k0ceysoIcRAgMBAAGjUzBRMB0GA1UdDgQWBBRFNalzNzgIMCBKsonBldYfsEd2OTAfBgNVHSMEGDAWgBRFNalzNzgIMCBKsonBldYfsEd2OTAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4ICAQAnz8kW+wsyteYCGK3F+EwN/feuQkKlPxWjl6ZGkg+xe5mgsAtNGwoWZz8EhyY3ppjTsJLxGWM9QhCSF2MeN0O0xGAQbiHpt/sjcUsDL9nb8u9aniNfjRTucEEM8HmBoxu+uKU2ZGPkz+DJllbv7rsDoVW54zaq+N/DxcOLnhZqQTwnjFmwncWaUy8u4Dz4oiDHIv8oi5v71DLfAUmIX7B7844e9VQ09xSxBCABTSyAj4LvQ3paCNjJ70362X6qprebCwIvEVcDyU2afPXdFqXI1kjTDwDBDMUB7MbbjqIo465GZr5IR5ccVxJhEkgJorwrxN6ywKb14oSQvbZhlDb+n3rOivvTJpKBoL9yLqRjq+lqD39627shf2zE4NBhtkpmaPTqg2VvN0YASuKoBswrdEi+OeLeLOniOIjbtPjN/9QPOSKOVxDE1VDyS187MsayfpuZphsMxKPvg9oDFmnFrf5kKxRTBIBGdtxNFamOWJqWLZCJ3wSp8w7QdnPAnn7sAswuI6RMh5EHsa6IN01lNw5XOd1VYDJqQW7ANZspiCJjxOpe8Dk6G7zLzD9EtlY+xPHW7/6eyTiJif1Z08lTZzqX2RgcYVL2EJiuj42FrGL6avYwnY7hN6hrnr431Zb/BY8ydpRTZh7k6zgYRK5+F+ic2NNp26DHvMRk26WsvQ==</Certificate>
@@ -34,7 +34,8 @@ namespace Tests
         [Test]
         public void RoundTrip_With_Default_RSAEncryption_Test()
         {
-            var encryptionResult = CryptoHelpers.EncryptPassphrase(_cert, _keepassMasterPassword);
+            var encryptionResult = AllowedCertificateRSA.Create(_cert);
+            CryptoHelpers.SetSecretKeyFromNewUserKey(encryptionResult, _keepassMasterPassword);
 
             // Serialize to xml
             string xml;
@@ -45,25 +46,22 @@ namespace Tests
             }
 
             // Deserialize xml
-            XmlCertificateShortcutProviderKey deserialized;
+            AllowedCertificateRSA deserialized;
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(xml)))
             {
-                deserialized = XmlUtilEx.Deserialize<XmlCertificateShortcutProviderKey>(ms);
+                deserialized = XmlUtilEx.Deserialize<AllowedCertificateRSA>(ms);
             }
 
-            var roundTripResult = CryptoHelpers.DecryptPassphrase(deserialized);
+            var roundTripResult = CryptoHelpers.DecryptSecretFromConfig(deserialized, CertProvType.CAPI);
 
-            Assert.That(roundTripResult.ReadData(), Is.EquivalentTo(_keepassMasterPassword.ReadUtf8()));
-
-            Assert.That(encryptionResult.RSAEncryptionPadding, Is.EqualTo(AllowedRSAEncryptionPadding.Default));
-            Assert.That(deserialized.RSAEncryptionPadding, Is.EqualTo(AllowedRSAEncryptionPadding.Default));
+            Assert.That(roundTripResult.ReadData(), Is.EquivalentTo(_keepassMasterPassword.ReadData()));
         }
 
         [Test]
         public void RoundTrip_V2_With_NonDefault_RSAPadding_Test()
         {
-            var encryptionResult = CryptoHelpers.EncryptPassphrase(_cert, _keepassMasterPassword, AllowedRSAEncryptionPadding.List[1]);
-
+            var encryptionResult = AllowedCertificateRSA.Create(_cert);
+            CryptoHelpers.SetSecretKeyFromNewUserKey(encryptionResult, _keepassMasterPassword);
             // Serialize to xml
             string xml;
             using (var ms = new MemoryStream())
@@ -73,53 +71,34 @@ namespace Tests
             }
 
             // Deserialize xml
-            XmlCertificateShortcutProviderKey deserialized;
+            AllowedCertificateRSA deserialized;
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(xml)))
             {
-                deserialized = XmlUtilEx.Deserialize<XmlCertificateShortcutProviderKey>(ms);
+                deserialized = XmlUtilEx.Deserialize<AllowedCertificateRSA>(ms);
             }
 
-            var roundTripResult = CryptoHelpers.DecryptPassphrase(deserialized);
+            var roundTripResult = CryptoHelpers.DecryptSecretFromConfig(deserialized, CertProvType.CAPI);
 
-            Assert.That(roundTripResult.ReadData(), Is.EquivalentTo(_keepassMasterPassword.ReadUtf8()));
+            Assert.That(roundTripResult.ReadData(), Is.EquivalentTo(_keepassMasterPassword.ReadData()));
 
-            Assert.That(encryptionResult.RSAEncryptionPadding, Is.EqualTo(AllowedRSAEncryptionPadding.List[1]));
-            Assert.That(deserialized.RSAEncryptionPadding, Is.EqualTo(AllowedRSAEncryptionPadding.List[1]));
         }
 
         [Test]
         public void V2_Xml_With_PKCS1_Padding_Can_Be_Decrypted()
         {
             // Deserialize xml
-            XmlCertificateShortcutProviderKey deserialized;
+            AllowedCertificateRSA deserialized;
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(_xmlV2_with_PKCS1_Padding)))
             {
-                deserialized = XmlUtilEx.Deserialize<XmlCertificateShortcutProviderKey>(ms);
+                deserialized = XmlUtilEx.Deserialize<AllowedCertificateRSA>(ms);
             }
 
-            var roundTripResult = CryptoHelpers.DecryptPassphrase(deserialized);
+            var roundTripResult = CryptoHelpers.DecryptSecretFromConfig(deserialized, CertProvType.CAPI);
 
-            Assert.That(roundTripResult.ReadData(), Is.EquivalentTo(_keepassMasterPassword.ReadUtf8()));
+            Assert.That(roundTripResult.ReadData(), Is.EquivalentTo(_keepassMasterPassword.ReadData()));
 
-            Assert.That(deserialized.RSAEncryptionPadding, Is.EqualTo(AllowedRSAEncryptionPadding.List[1]));
         }
 
-        [Test]
-        public void XmlKeyV1_Uses_OEAPSH256_RSAEncryptionPadding()
-        {
-            XmlCertificateShortcutProviderKey deserialized;
-            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(_xmlV1)))
-            {
-                deserialized = XmlUtilEx.Deserialize<XmlCertificateShortcutProviderKey>(ms);
-            }
 
-            Assert.That(deserialized.RSAEncryptionPadding.Name, Is.EqualTo("OAEPSHA256"));
-        }
-
-        [Test]
-        public void Default_AllowedRSAEncryptionPadding_Is_OAEPSHA256()
-        {
-            Assert.That(AllowedRSAEncryptionPadding.Default.Name, Is.EqualTo("OAEPSHA256"));
-        }
     }
 }
