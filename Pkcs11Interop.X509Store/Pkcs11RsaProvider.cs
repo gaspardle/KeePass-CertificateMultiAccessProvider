@@ -170,7 +170,7 @@ namespace Net.Pkcs11Interop.X509Store
         /// <param name="padding"><see cref="RSAEncryptionPadding"/> to be used while decrypting.</param>
         /// <returns>Unencrypted data.</returns>
 		public override byte[] Decrypt(byte[] data, RSAEncryptionPadding padding)
-		{
+        {
 
             var x = _certContext.KeyUsageRequiresLogin;
             if (padding == RSAEncryptionPadding.Pkcs1)
@@ -188,7 +188,8 @@ namespace Net.Pkcs11Interop.X509Store
                 var hash_alg = CKM.CKM_SHA256;
                 var mgf = CKG.CKG_MGF1_SHA256;
 
-                if (padding == RSAEncryptionPadding.OaepSHA1) {
+                if (padding == RSAEncryptionPadding.OaepSHA1)
+                {
                     hash_alg = CKM.CKM_SHA_1;
                     mgf = CKG.CKG_MGF1_SHA1;
                 }
@@ -202,7 +203,7 @@ namespace Net.Pkcs11Interop.X509Store
                     hash_alg = CKM.CKM_SHA384;
                     mgf = CKG.CKG_MGF1_SHA384;
                 }
-                else if (padding == RSAEncryptionPadding.OaepSHA256)
+                else if (padding == RSAEncryptionPadding.OaepSHA512)
                 {
                     hash_alg = CKM.CKM_SHA512;
                     mgf = CKG.CKG_MGF1_SHA512;
@@ -228,7 +229,7 @@ namespace Net.Pkcs11Interop.X509Store
         /// <param name="padding"><see cref="RSAEncryptionPadding"/> to be used while encrypting.</param>
         /// <returns>Cipher text representing encrypted <paramref name="data"/>.</returns>
 		public override byte[] Encrypt(byte[] data, RSAEncryptionPadding padding)
-		{
+        {
             if (padding == RSAEncryptionPadding.Pkcs1)
             {
                 using (ISession session = _certContext.TokenContext.SlotContext.Slot.OpenSession(SessionType.ReadOnly))
@@ -243,12 +244,12 @@ namespace Net.Pkcs11Interop.X509Store
             }
         }
 
-		/// <summary>
-		/// Decrypts the input data using the private key
-		/// </summary>
-		/// <param name="rgb">The cipher text to be decrypted</param>
-		/// <returns>The resulting decryption of the rgb parameter in plain text</returns>
-		public override byte[] DecryptValue(byte[] rgb)
+        /// <summary>
+        /// Decrypts the input data using the private key
+        /// </summary>
+        /// <param name="rgb">The cipher text to be decrypted</param>
+        /// <returns>The resulting decryption of the rgb parameter in plain text</returns>
+        public override byte[] DecryptValue(byte[] rgb)
         {
             // Note: NotSupportedException should be thrown starting with the .NET Framework 4.6.
             throw new NotSupportedException();

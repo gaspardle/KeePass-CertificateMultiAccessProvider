@@ -44,18 +44,18 @@ partial class Pkcs11CertificateSelectionForm
             // 
             this.textBoxLibraryPath.Location = new System.Drawing.Point(12, 30);
             this.textBoxLibraryPath.Name = "textBoxLibraryPath";
-            this.textBoxLibraryPath.Size = new System.Drawing.Size(301, 20);
+            this.textBoxLibraryPath.Size = new System.Drawing.Size(498, 20);
             this.textBoxLibraryPath.TabIndex = 0;
             // 
             // buttonLoadLibrary
             // 
-            this.buttonLoadLibrary.Location = new System.Drawing.Point(403, 29);
+            this.buttonLoadLibrary.Location = new System.Drawing.Point(600, 29);
             this.buttonLoadLibrary.Name = "buttonLoadLibrary";
             this.buttonLoadLibrary.Size = new System.Drawing.Size(78, 21);
             this.buttonLoadLibrary.TabIndex = 1;
             this.buttonLoadLibrary.Text = "Load";
             this.buttonLoadLibrary.UseVisualStyleBackColor = true;
-            this.buttonLoadLibrary.Click += new System.EventHandler(this.buttonLoadLibrary_Click);
+            this.buttonLoadLibrary.Click += new System.EventHandler(this.ButtonLoadLibrary_Click);
             // 
             // treeViewPKCS11
             // 
@@ -63,7 +63,7 @@ partial class Pkcs11CertificateSelectionForm
             this.treeViewPKCS11.Name = "treeViewPKCS11";
             this.treeViewPKCS11.Size = new System.Drawing.Size(382, 263);
             this.treeViewPKCS11.TabIndex = 2;
-            this.treeViewPKCS11.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeViewPKCS11_AfterSelect);
+            this.treeViewPKCS11.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.TreeViewPKCS11_AfterSelect);
             // 
             // buttonOk
             // 
@@ -74,7 +74,7 @@ partial class Pkcs11CertificateSelectionForm
             this.buttonOk.TabIndex = 3;
             this.buttonOk.Text = "OK";
             this.buttonOk.UseVisualStyleBackColor = true;
-            this.buttonOk.Click += new System.EventHandler(this.buttonOk_Click);
+            this.buttonOk.Click += new System.EventHandler(this.ButtonOk_Click);
             // 
             // buttonCancel
             // 
@@ -85,14 +85,14 @@ partial class Pkcs11CertificateSelectionForm
             this.buttonCancel.TabIndex = 4;
             this.buttonCancel.Text = "Cancel";
             this.buttonCancel.UseVisualStyleBackColor = true;
-            this.buttonCancel.Click += new System.EventHandler(this.buttonCancel_Click);
+            this.buttonCancel.Click += new System.EventHandler(this.ButtonCancel_Click);
             // 
             // label1
             // 
             this.label1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.label1.Location = new System.Drawing.Point(403, 74);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(272, 42);
+            this.label1.Size = new System.Drawing.Size(274, 42);
             this.label1.TabIndex = 5;
             // 
             // label2
@@ -103,7 +103,6 @@ partial class Pkcs11CertificateSelectionForm
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(274, 221);
             this.label2.TabIndex = 6;
-            this.label2.Text = "()";
             // 
             // label4
             // 
@@ -111,10 +110,10 @@ partial class Pkcs11CertificateSelectionForm
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label4.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.label4.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.label4.Location = new System.Drawing.Point(1, 61);
-            this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label4.Location = new System.Drawing.Point(12, 61);
+            this.label4.Margin = new System.Windows.Forms.Padding(40, 0, 40, 0);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(684, 2);
+            this.label4.Size = new System.Drawing.Size(665, 2);
             this.label4.TabIndex = 30;
             // 
             // label5
@@ -124,17 +123,17 @@ partial class Pkcs11CertificateSelectionForm
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(113, 13);
             this.label5.TabIndex = 31;
-            this.label5.Text = "PCKS#11 Library Path";
+            this.label5.Text = "PKCS#11 Library Path";
             // 
             // buttonBrowse
             // 
-            this.buttonBrowse.Location = new System.Drawing.Point(319, 29);
+            this.buttonBrowse.Location = new System.Drawing.Point(516, 29);
             this.buttonBrowse.Name = "buttonBrowse";
             this.buttonBrowse.Size = new System.Drawing.Size(78, 21);
             this.buttonBrowse.TabIndex = 32;
             this.buttonBrowse.Text = "Browse...";
             this.buttonBrowse.UseVisualStyleBackColor = true;
-            this.buttonBrowse.Click += new System.EventHandler(this.buttonBrowse_Click);
+            this.buttonBrowse.Click += new System.EventHandler(this.ButtonBrowse_Click);
             // 
             // Pkcs11CertificateSelectionForm
             // 

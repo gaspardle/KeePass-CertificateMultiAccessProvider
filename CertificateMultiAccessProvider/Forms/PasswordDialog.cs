@@ -1,4 +1,4 @@
-using KeePass.App;
+﻿using KeePass.App;
 using KeePass.UI;
 using KeePassLib.Security;
 
@@ -52,7 +52,7 @@ public partial class PasswordDialog : Form
         base.Dispose(disposing);
     }
 
-    private void okButton_Click(object sender, EventArgs e)
+    private void OkButton_Click(object sender, EventArgs e)
     {
 
         if (_keyCreation && subjectTextBox.Text.Length == 0)
@@ -71,7 +71,7 @@ public partial class PasswordDialog : Form
         DialogResult = DialogResult.OK;
     }
 
-    private void cancelButton_Click(object sender, EventArgs e)
+    private void CancelButton_Click(object sender, EventArgs e)
     {
         DialogResult = DialogResult.Cancel;
     }
@@ -79,7 +79,7 @@ public partial class PasswordDialog : Form
 
 
 
-    private void hidePasswordCheckBox_CheckedChanged(object sender, EventArgs e)
+    private void HidePasswordCheckBox_CheckedChanged(object sender, EventArgs e)
     {
         bool hide = hidePasswordCheckBox.Checked;
         if (!hide && !AppPolicy.Try(AppPolicyId.UnhidePasswords))

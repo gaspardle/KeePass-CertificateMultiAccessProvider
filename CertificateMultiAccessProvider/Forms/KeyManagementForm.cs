@@ -1,3 +1,4 @@
+using System.Runtime.ConstrainedExecution;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -8,39 +9,42 @@ using KeePassLib.Cryptography;
 using KeePassLib.Security;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
+using static CertificateMultiAccessProvider.CryptoHelpers;
 
 namespace CertificateMultiAccessProvider;
 
 public partial class KeyManagementForm : Form
 {
-    private ProtectedBinary SecretKey;
-    private readonly CertProviderConfig userPublicKeys;
+    private ProtectedBinary _secretKey;
+    private readonly CertProviderConfiguration _certProviderConfigCopy;
+    private readonly CertProviderConfiguration _certProviderConfig;
     private readonly bool _isKeyCreation;
-    private string _keyFileDefaultLocation;
+    private readonly bool _allowNotSecureRemoval = false;
     private readonly CertificateMultiAccessProvider _provider;
-    private const bool AllowNotSecureRemoval = false;
+    private string _keyFileDefaultLocation;
 
     public X509Certificate2 SelectedCertificate { get; set; }
 
 
-    public KeyManagementForm(string keyFileDefaultLocation, CertProviderConfig certProviderConfig, CertificateMultiAccessProvider provider, bool keyCreation = false)
+    public KeyManagementForm(string keyFileDefaultLocation, CertProviderConfiguration certProviderConfig, CertificateMultiAccessProvider provider, bool keyCreation = false)
     {
         InitializeComponent();
 
-        userPublicKeys = certProviderConfig; //.Copy();
+        _certProviderConfigCopy = certProviderConfig.Copy();
+        _certProviderConfig = certProviderConfig;
         _isKeyCreation = keyCreation;
+        _allowNotSecureRemoval = provider.Settings.AllowUnsecureDeletion;
         _keyFileDefaultLocation = keyFileDefaultLocation;
         _provider = provider;
 
-        listViewCertificate.Columns.Add("Type");
         listViewCertificate.Columns.Add("Subject");
         listViewCertificate.Columns.Add("Issuer");
         listViewCertificate.Columns.Add("Thumbprint");
 
         if (keyCreation)
         {
-            SecretKey = new ProtectedBinary(true, CryptoRandom.Instance.GetRandomBytes(32));
-            if ((SecretKey == null) || (SecretKey.Length != 32))
+            _secretKey = new ProtectedBinary(true, CryptoRandom.Instance.GetRandomBytes(32));
+            if ((_secretKey == null) || (_secretKey.Length != 32))
             {
                 throw new SecurityException();
             }
@@ -60,22 +64,24 @@ public partial class KeyManagementForm : Form
 
     private void RefreshList()
     {
-        if (userPublicKeys.AllowedCertificates.Count == 0) return;
+        if (_certProviderConfigCopy.AllowedCertificates.Count == 0) return;
 
         listViewCertificate.BeginUpdate();
         listViewCertificate.Items.Clear();
         listViewCertificate.ListViewItemSorter = null;
-        foreach (var p in userPublicKeys.AllowedCertificates)
+
+        foreach (var p in _certProviderConfigCopy.AllowedCertificates)
         {
             var cert = p.ReadCertificate();
 
             var subject = cert.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
             var issuer = cert.GetNameInfo(X509NameType.SimpleName, forIssuer: true);
-            var item = new ListViewItem("type");
-            item.SubItems.AddRange(new List<string>() { subject, issuer, cert.Thumbprint }.ToArray());
+            var item = new ListViewItem(subject);
+            item.SubItems.AddRange(new List<string>() { issuer, cert.Thumbprint }.ToArray());
             item.Tag = p;
             listViewCertificate.Items.Add(item);
         }
+
         //listView1.ListViewItemSorter = sorter;
         listViewCertificate.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
         listViewCertificate.EndUpdate();
@@ -97,21 +103,21 @@ public partial class KeyManagementForm : Form
 
     private bool GetSecretKey()
     {
-        if (SecretKey == null)
+        if (_secretKey == null)
         {
-            var (cert, certProvType) = CryptoHelpers.ShowCertificateSelection("Select a current valid certificate to complete the creation of a new certificate.", userPublicKeys);
+            var (cert, certProvType) = CryptoHelpers.ShowCertificateSelection("Select a current certificate to confirm the addition of a new certificate.", _certProviderConfigCopy, _provider.Settings);
             if (cert == null)
             {
                 MessageService.ShowWarning("You must select a certificate.");
                 return false;
             }
 
-            var certInfo = userPublicKeys.AllowedCertificates.Where(p => p.Thumbprint == cert.Thumbprint).FirstOrDefault();
+            var certInfo = _certProviderConfigCopy.AllowedCertificates.Where(p => p.Thumbprint == cert.Thumbprint).FirstOrDefault();
 
             this.Enabled = false;
             try
             {
-                SecretKey = CryptoHelpers.DecryptSecretFromConfig(certInfo, certProvType);
+                _secretKey = CryptoHelpers.DecryptSecretFromConfig(certInfo, certProvType, _provider.Settings);
             }
             catch (Exception ex)
             {
@@ -123,7 +129,7 @@ public partial class KeyManagementForm : Form
                 this.Enabled = true;
             }
 
-            if (SecretKey == null)
+            if (_secretKey == null)
             {
                 MessageService.ShowWarning("Error while retrieving key.");
                 return false;
@@ -133,12 +139,12 @@ public partial class KeyManagementForm : Form
         return true;
     }
 
-    private void addCertFromStoreButton_Click(object sender, EventArgs e)
+    private void AddCertFromStoreButton_Click(object sender, EventArgs e)
     {
         var certificate = CertStoreCAPI.SelectCertificate("Select the certificate to add as an authentication method.", hwnd: this.Handle);
         if (certificate == null) return;
 
-        if (userPublicKeys.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
+        if (_certProviderConfigCopy.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
         {
             MessageBox.Show("Certificate is already present.");
             return;
@@ -149,7 +155,7 @@ public partial class KeyManagementForm : Form
         {
             if (rsa.KeySize < 2048)
             {
-                MessageService.ShowWarning("Certificate key size which are < 2048 not supported.");
+                MessageService.ShowWarning("Certificates which the key size are lesser than 2048 bits are not supported.");
                 return;
             }
         }
@@ -159,12 +165,12 @@ public partial class KeyManagementForm : Form
             return;
         }
 
-        Add(AllowedCertificateRSA.Create(certificate));
+        Add(AllowedCertificateRSA.Create(certificate, AllowedRSAEncryptionPadding.GetFromName(_provider.Settings.DefaultRsaPaddingName)));
     }
 
-    private void buttonAddPkcs11_Click(object sender, EventArgs e)
+    private void ButtonAddPkcs11_Click(object sender, EventArgs e)
     {
-        var form = new Pkcs11CertificateSelectionForm(null, userPublicKeys.AllowedCertificates.Select(k => k.Thumbprint));
+        var form = new Pkcs11CertificateSelectionForm(null, _provider.Settings, _certProviderConfigCopy.AllowedCertificates.Select(k => k.Thumbprint));
         var dialogResult = form.ShowDialog();
 
         if (dialogResult == DialogResult.OK)
@@ -173,16 +179,16 @@ public partial class KeyManagementForm : Form
             if (pkcsCertificate == null) return;
 
             var certificate = pkcsCertificate.Info.ParsedCertificate;
-            if (userPublicKeys.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
+            if (_certProviderConfigCopy.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
             {
                 MessageBox.Show("Certificate is already present.");
                 return;
             }
-            Add(AllowedCertificateRSA.Create(certificate));
+            Add(AllowedCertificateRSA.Create(certificate, AllowedRSAEncryptionPadding.GetFromName(_provider.Settings.DefaultRsaPaddingName)));
         }
     }
 
-    private void addCertInternalButton_Click(object sender, EventArgs e)
+    private void AddCertInternalButton_Click(object sender, EventArgs e)
     {
         var form = new PasswordDialog("", true);
         var dialogResult = form.ShowDialog();
@@ -197,7 +203,7 @@ public partial class KeyManagementForm : Form
 
         if (dialogResult == DialogResult.OK && passphrase.Length > 0)
         {
-            var newCertificate = CryptoHelpers.buildSelfSignedServerCertificate(subject);
+            var newCertificate = CryptoHelpers.GenerateSelfSignedCertificate(subject);
             Add(AllowedCertificateRSAInternal.Create(newCertificate, passphrase));
         }
     }
@@ -210,8 +216,8 @@ public partial class KeyManagementForm : Form
         }
         try
         {
-            CryptoHelpers.SetSecretKeyFromNewUserKey(certInfo, SecretKey);
-            userPublicKeys.AllowedCertificates.Add(certInfo);
+            CryptoHelpers.SetSecretKeyFromNewUserKey(certInfo, _secretKey);
+            _certProviderConfigCopy.AllowedCertificates.Add(certInfo);
         }
         catch (Exception ex)
         {
@@ -222,39 +228,29 @@ public partial class KeyManagementForm : Form
         RefreshList();
     }
 
-    private void buttonOk_Click(object sender, EventArgs e)
+    private void ButtonOk_Click(object sender, EventArgs e)
     {
-        if (userPublicKeys.AllowedCertificates.Count == 0)
+        if (_certProviderConfigCopy.AllowedCertificates.Count == 0)
         {
             MessageService.ShowWarning("You must add at least one certificate.");
             return;
         }
 
-        MessageService.ShowWarning("Changes will be committed when the database is saved in KeePass.");
+        if (!_isKeyCreation)
+        {
+            MessageService.ShowWarning("Changes will be committed when the database is saved in KeePass.");
+        }
 
-        //if (string.IsNullOrWhiteSpace(keyFileLocationTextBox.Text))
-        //{
-        //    MessageService.ShowWarning("File location required.");
-        //    return;
-        //}
-
-        //bool overwrite = false;
-        //if (File.Exists(keyFileLocationTextBox.Text))
-        //{
-        //    overwrite = MessageService.AskYesNo($"The file '{keyFileLocationTextBox.Text}' already exists. Overwrite?", "Warning");
-        //    if (overwrite != true)
-        //    {
-        //        return;
-        //    }
-        //}
-
-        //using (var fs = new FileStream(keyFileLocationTextBox.Text, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.Read))
-        //{
-        //    XmlUtilEx.Serialize(fs, UserPublicKeys);
-        //}
+        _certProviderConfig.AllowedCertificates.Clear();
+        _certProviderConfig.AllowedCertificates.AddRange(_certProviderConfigCopy.AllowedCertificates);
 
         _provider.SetModified();
         DialogResult = DialogResult.OK;
+    }
+
+    private void ButtonCancel_Click(object sender, EventArgs e)
+    {
+        DialogResult = DialogResult.Cancel;
     }
 
     /// <summary>
@@ -275,7 +271,7 @@ public partial class KeyManagementForm : Form
 
     }
 
-    private void displayCertificateDetails_Click(object sender, EventArgs e)
+    private void DisplayCertificateDetails_Click(object sender, EventArgs e)
     {
         if (listViewCertificate.SelectedIndices.Count == 0)
         {
@@ -298,9 +294,9 @@ public partial class KeyManagementForm : Form
         }
     }
 
-    private void removeCertButton_Click(object sender, EventArgs e)
+    private void RemoveCertButton_Click(object sender, EventArgs e)
     {
-        if (!_isKeyCreation && !AllowNotSecureRemoval)
+        if (!_isKeyCreation && !_allowNotSecureRemoval)
         {
             MessageBox.Show("To remove a certificate, go to File -> Change master key", "CertificateMultiAccess");
             return;
@@ -321,21 +317,21 @@ public partial class KeyManagementForm : Form
 
             if (result == DialogResult.Yes)
             {
-                userPublicKeys.AllowedCertificates.Remove(item);
+                _certProviderConfigCopy.AllowedCertificates.Remove(item);
                 RefreshList();
             }
         }
     }
 
-    private void listViewCertificate_MouseDoubleClick(object sender, MouseEventArgs e)
+    private void ListViewCertificate_MouseDoubleClick(object sender, MouseEventArgs e)
     {
         var certificateInfo = (AllowedCertificate)listViewCertificate.SelectedItems[0]?.Tag;
         if (certificateInfo != null)
         {
-            displayCertificateDetails_Click(sender, e);
+            DisplayCertificateDetails_Click(sender, e);
         }
     }
-    private void exportButton_Click(object sender, EventArgs e)
+    private void ExportButton_Click(object sender, EventArgs e)
     {
         var sfd = new SaveFileDialogEx("Export CertificateMultiAccess Config file")
         {
@@ -346,10 +342,10 @@ public partial class KeyManagementForm : Form
         {
             _keyFileDefaultLocation = sfd.FileName;
 
-            CertificateMultiAccessProvider.ExportConfig(sfd.FileName, userPublicKeys);
+            CertificateMultiAccessProvider.ExportConfig(sfd.FileName, _certProviderConfigCopy);
         }
     }
-    private void importButton_Click(object sender, EventArgs e)
+    private void ImportButton_Click(object sender, EventArgs e)
     {
         var sfd = new OpenFileDialogEx("Import CertificateMultiAccess Config file")
         {
@@ -372,10 +368,10 @@ public partial class KeyManagementForm : Form
                 foreach (var certInfo in config.AllowedCertificates)
                 {
                     var newCertInfo = certInfo.Clone();
-                    if (!userPublicKeys.AllowedCertificates.Any(c => c.Thumbprint == newCertInfo.Thumbprint))
+                    if (!_certProviderConfigCopy.AllowedCertificates.Any(c => c.Thumbprint == newCertInfo.Thumbprint))
                     {
-                        CryptoHelpers.SetSecretKeyFromNewUserKey(newCertInfo, SecretKey);
-                        userPublicKeys.AllowedCertificates.Add(newCertInfo);
+                        CryptoHelpers.SetSecretKeyFromNewUserKey(newCertInfo, _secretKey);
+                        _certProviderConfigCopy.AllowedCertificates.Add(newCertInfo);
                         count++;
                     }
                 }
@@ -392,21 +388,23 @@ public partial class KeyManagementForm : Form
 
     private void ExportBackingKey()
     {
-        MessageBox.Show("Attention, ...", "Export key file", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show("The exported file can be used as a key file for this database.", "Export key file", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
         var sfd = new SaveFileDialogEx("Export Key file")
         {
             Filter = $"Key files (*.keyx,*.key)|*.keyx;*.key|All files (*.*)|*.*",
             FileName = _keyFileDefaultLocation
         };
+
         if (sfd.ShowDialog() == DialogResult.OK)
         {
             GetSecretKey();
 
-            var data = CryptoUtil.HashSha256(SecretKey.ReadData());
+            var data = CryptoUtil.HashSha256(_secretKey.ReadData());
 
             var kf = KeePassLib.Keys.KfxFile.Create(0, data, null);
             var ioc = IOConnectionInfo.FromPath(sfd.FileName);
-            using (Stream s = IOConnection.OpenWrite(ioc))
+            using (var s = IOConnection.OpenWrite(ioc))
             {
                 kf.Save(s);
             }
@@ -415,31 +413,30 @@ public partial class KeyManagementForm : Form
         }
     }
 
-    private void buttonMore_Click(object sender, EventArgs e)
+    private void ButtonMore_Click(object sender, EventArgs e)
     {
         contextMenuStrip1.Show(buttonMore, new Point(0, buttonMore.Height));
     }
 
-    private void toolStripMenuItemExportKey_Click(object sender, EventArgs e)
+    private void ToolStripMenuItemExportKey_Click(object sender, EventArgs e)
     {
         ExportBackingKey();
     }
 
-    private void toolStripMenuItemCustomKey_Click(object sender, EventArgs e)
+    private void ToolStripMenuItemCustomKey_Click(object sender, EventArgs e)
     {
         var form = new PinDialog("(Experimental) Set Provider Key", "Set custom value for the key used in the database composite key, instead of a random value. (32 bytes hex)");
         var dialogResult = form.ShowDialog();
         ;
         if (form.Pin != null && dialogResult == DialogResult.OK)
         {
-            //validation..
-
-            //
             var newKeyHex = form.Pin.ReadString();
-            var neyKey = MemUtil.HexStringToByteArray(newKeyHex);
-            SecretKey = new ProtectedBinary(true, neyKey);
-            MemUtil.ZeroByteArray(neyKey);
+            var newKey = MemUtil.HexStringToByteArray(newKeyHex);
+            _secretKey = new ProtectedBinary(true, newKey);
+            MemUtil.ZeroByteArray(newKey);
         }
     }
+
+
 }
 

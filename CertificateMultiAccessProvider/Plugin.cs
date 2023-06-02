@@ -1,5 +1,8 @@
+using System.Windows.Forms;
 using KeePass.Forms;
 using KeePass.Plugins;
+using KeePass.UI;
+using KeePassLib;
 using KeePassLib.Utility;
 
 // The namespace must be named like the DLL file without extension.
@@ -10,6 +13,8 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
 {
     private IPluginHost _host = null;
     private CertificateMultiAccessProvider _provider;
+
+    //public override string UpdateUrl => "https://raw.githubusercontent.com/gaspardle/KeePass-CertificateMultiAccessProvider/master/plugin-version.txt";
 
     /// <summary>
     /// The <c>Initialize</c> method is called by KeePass when
@@ -70,7 +75,7 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
         {
             var tsmi = new ToolStripMenuItem
             {
-                Text = "CertificateMultiAccess - Settings..."
+                Text = "CertificateMultiAccess - Settings...",
             };
             tsmi.Click += OnOptionsClicked;
             return tsmi;
@@ -80,6 +85,12 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
 
     private void OnOptionsClicked(object sender, EventArgs e)
     {
+        if (!_host.Database.IsOpen)
+        {
+            MessageBox.Show("No database open");
+            return;
+        }
+
         var databasePath = UrlUtil.StripExtension(_host.Database.IOConnectionInfo.Path);
 
         if (string.IsNullOrWhiteSpace(databasePath))
@@ -89,7 +100,7 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
 
         var keyFilePath = databasePath + CertificateMultiAccessProvider.DefaultKeyExtension;
 
-        using var form = new KeyManagementForm(keyFilePath, _provider.certProviderConfig, _provider, false);
+        using var form = new KeyManagementForm(keyFilePath, _provider._certProviderConfig, _provider, false);
         form.ShowDialog();
     }
 }

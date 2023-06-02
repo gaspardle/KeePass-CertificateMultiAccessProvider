@@ -6,7 +6,7 @@ namespace CertificateMultiAccessProvider.CertStore;
 
 public class CertStorePkcs11 : ICertStoreProvider
 {
-    string _pkcsLibraryPath;
+    private readonly string _pkcsLibraryPath;
 
     public CertStorePkcs11(string pkcsLibraryPath)
     {
@@ -28,10 +28,17 @@ public class CertStorePkcs11 : ICertStoreProvider
             throw new InvalidOperationException("The specified certificate does not have a private key.");
         }
 
-        RSA rsa;
-        if ((rsa = fromStoreCertificate.GetRSAPrivateKey()) != null)
+        if (certConfig is AllowedCertificateRSA rsaCertConfig)
         {
-            return rsa.Decrypt(value, RSAEncryptionPadding.OaepSHA256);
+            RSA rsa;
+            if ((rsa = fromStoreCertificate.GetRSAPrivateKey()) != null)
+            {
+                return rsa.Decrypt(value, rsaCertConfig.RSAEncryptionPadding.Value);
+            }
+            else
+            {
+                throw new NotSupportedException("Unable to use certificate RSA private key");
+            }
         }
         else
         {
@@ -64,25 +71,28 @@ public class CertStorePkcs11 : ICertStoreProvider
             throw new NotSupportedException("Certificate's key type not supported.");
         }
     }
+
     public byte[] Encrypt(AllowedCertificate certConfig, byte[] value)
     {
-        using var fromSourceCertificate = certConfig.ReadCertificate();
-        var fromStoreCertificate = LoadCertificateFromPkcs11(fromSourceCertificate);
+        return null;
+        //using var fromSourceCertificate = certConfig.ReadCertificate();
+        //var fromStoreCertificate = LoadCertificateFromPkcs11(fromSourceCertificate);
 
-        if (fromStoreCertificate == null)
-        {
-            throw new InvalidOperationException("The specified certificate could not be found in the pkcs11 token.");
-        }
+        //if (fromStoreCertificate == null)
+        //{
+        //    throw new InvalidOperationException("The specified certificate could not be found in the pkcs11 token.");
+        //}
 
-        RSA rsa;
-        if ((rsa = fromStoreCertificate.GetRSAPublicKey()) != null)
-        {
-            return rsa.Encrypt(value, RSAEncryptionPadding.OaepSHA256);
-        }
-        else
-        {
-            throw new NotSupportedException("Certificate's key type not supported.");
-        }
+        //RSA rsa;
+        //var rsaPadding = certConfig.RSAEncryptionPadding ?? AllowedRSAEncryptionPadding.Default;
+        //if ((rsa = fromStoreCertificate.GetRSAPublicKey()) != null)
+        //{
+        //    return rsa.Encrypt(value, rsaPadding.Value);
+        //}
+        //else
+        //{
+        //    throw new NotSupportedException("Certificate's key type not supported.");
+        //}
     }
 
     private Pkcs11X509Certificate LoadCertificateFromPkcs11(X509Certificate2 publicCert)

@@ -59,7 +59,7 @@ namespace CertificateMultiAccessProvider
             this.listViewCertificate.TabIndex = 5;
             this.listViewCertificate.UseCompatibleStateImageBehavior = false;
             this.listViewCertificate.View = System.Windows.Forms.View.Details;
-            this.listViewCertificate.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listViewCertificate_MouseDoubleClick);
+            this.listViewCertificate.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.ListViewCertificate_MouseDoubleClick);
             // 
             // displayCertificateDetailsButton
             // 
@@ -70,7 +70,7 @@ namespace CertificateMultiAccessProvider
             this.displayCertificateDetailsButton.TabIndex = 20;
             this.displayCertificateDetailsButton.Text = "View...";
             this.displayCertificateDetailsButton.UseVisualStyleBackColor = true;
-            this.displayCertificateDetailsButton.Click += new System.EventHandler(this.displayCertificateDetails_Click);
+            this.displayCertificateDetailsButton.Click += new System.EventHandler(this.DisplayCertificateDetails_Click);
             // 
             // selectCertificateButton
             // 
@@ -81,7 +81,7 @@ namespace CertificateMultiAccessProvider
             this.selectCertificateButton.TabIndex = 10;
             this.selectCertificateButton.Text = "Use selected certificate";
             this.selectCertificateButton.UseVisualStyleBackColor = true;
-            this.selectCertificateButton.Click += new System.EventHandler(this.selectCertificateButton_Click);
+            this.selectCertificateButton.Click += new System.EventHandler(this.SelectCertificateButton_Click);
             // 
             // buttonPkcs11
             // 
@@ -92,7 +92,7 @@ namespace CertificateMultiAccessProvider
             this.buttonPkcs11.TabIndex = 21;
             this.buttonPkcs11.Text = "Use certificate from PKCS#11 token...";
             this.buttonPkcs11.UseVisualStyleBackColor = true;
-            this.buttonPkcs11.Click += new System.EventHandler(this.buttonPkcs11_Click);
+            this.buttonPkcs11.Click += new System.EventHandler(this.ButtonPkcs11_Click);
             // 
             // KeySelectionForm
             // 

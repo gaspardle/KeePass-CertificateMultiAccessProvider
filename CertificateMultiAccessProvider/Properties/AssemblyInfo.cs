@@ -12,9 +12,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Certificate MultiAcess Provider")]
 [assembly: AssemblyDescription("Provides a way to open the KeePass key-chain with an X509 certificate.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Luc-Edmond Gaspard")]
+[assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("KeePass Plugin")]
-[assembly: AssemblyCopyright("Copyright © Melvyn Laïly 2019-2022")]
+[assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -43,5 +43,5 @@ using System.Runtime.InteropServices;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1050:Declare types in namespaces", Justification = "Unnecessary")]
 public static class Version
 {
-    public const string Number = "0.8.0.0";
+    public const string Number = "1.0.0.0";
 }

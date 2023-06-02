@@ -60,7 +60,7 @@ partial class PinDialog
             this.hidePasswordCheckBox.Text = "***";
             this.hidePasswordCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.hidePasswordCheckBox.UseVisualStyleBackColor = true;
-            this.hidePasswordCheckBox.CheckedChanged += new System.EventHandler(this.hidePasswordCheckBox_CheckedChanged);
+            this.hidePasswordCheckBox.CheckedChanged += new System.EventHandler(this.HidePasswordCheckBox_CheckedChanged);
             // 
             // labelText
             // 
@@ -92,7 +92,7 @@ partial class PinDialog
             this.okButton.TabIndex = 26;
             this.okButton.Text = "Ok";
             this.okButton.UseVisualStyleBackColor = true;
-            this.okButton.Click += new System.EventHandler(this.okButton_Click);
+            this.okButton.Click += new System.EventHandler(this.OkButton_Click);
             // 
             // labelTitle
             // 

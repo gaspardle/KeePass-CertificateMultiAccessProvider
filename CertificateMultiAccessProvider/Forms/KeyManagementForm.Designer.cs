@@ -1,4 +1,4 @@
-﻿using KeePass.UI;
+using KeePass.UI;
 
 namespace CertificateMultiAccessProvider
 {
@@ -56,18 +56,18 @@ namespace CertificateMultiAccessProvider
             this.buttonOk.TabIndex = 50;
             this.buttonOk.Text = "OK";
             this.buttonOk.UseVisualStyleBackColor = true;
-            this.buttonOk.Click += new System.EventHandler(this.buttonOk_Click);
+            this.buttonOk.Click += new System.EventHandler(this.ButtonOk_Click);
             // 
             // addCertFromStoreButton
             // 
             this.addCertFromStoreButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.addCertFromStoreButton.Location = new System.Drawing.Point(11, 194);
             this.addCertFromStoreButton.Name = "addCertFromStoreButton";
-            this.addCertFromStoreButton.Size = new System.Drawing.Size(146, 23);
+            this.addCertFromStoreButton.Size = new System.Drawing.Size(156, 23);
             this.addCertFromStoreButton.TabIndex = 15;
             this.addCertFromStoreButton.Text = "Add a certificate...";
             this.addCertFromStoreButton.UseVisualStyleBackColor = true;
-            this.addCertFromStoreButton.Click += new System.EventHandler(this.addCertFromStoreButton_Click);
+            this.addCertFromStoreButton.Click += new System.EventHandler(this.AddCertFromStoreButton_Click);
             // 
             // label3
             // 
@@ -87,18 +87,19 @@ namespace CertificateMultiAccessProvider
             this.exportButton.TabIndex = 60;
             this.exportButton.Text = "Export config...";
             this.exportButton.UseVisualStyleBackColor = true;
-            this.exportButton.Click += new System.EventHandler(this.exportButton_Click);
+            this.exportButton.Click += new System.EventHandler(this.ExportButton_Click);
             // 
             // addCertInternalButton
             // 
             this.addCertInternalButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.addCertInternalButton.Location = new System.Drawing.Point(11, 249);
             this.addCertInternalButton.Name = "addCertInternalButton";
-            this.addCertInternalButton.Size = new System.Drawing.Size(146, 24);
+            this.addCertInternalButton.Size = new System.Drawing.Size(156, 24);
             this.addCertInternalButton.TabIndex = 20;
             this.addCertInternalButton.Text = "Add internal certificate...";
             this.addCertInternalButton.UseVisualStyleBackColor = true;
-            this.addCertInternalButton.Click += new System.EventHandler(this.addCertInternalButton_Click);
+            this.addCertInternalButton.Visible = false;
+            this.addCertInternalButton.Click += new System.EventHandler(this.AddCertInternalButton_Click);
             // 
             // listViewCertificate
             // 
@@ -116,7 +117,7 @@ namespace CertificateMultiAccessProvider
             this.listViewCertificate.TabIndex = 5;
             this.listViewCertificate.UseCompatibleStateImageBehavior = false;
             this.listViewCertificate.View = System.Windows.Forms.View.Details;
-            this.listViewCertificate.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listViewCertificate_MouseDoubleClick);
+            this.listViewCertificate.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.ListViewCertificate_MouseDoubleClick);
             // 
             // displayCertificateDetailsButton
             // 
@@ -127,7 +128,7 @@ namespace CertificateMultiAccessProvider
             this.displayCertificateDetailsButton.TabIndex = 35;
             this.displayCertificateDetailsButton.Text = "View...";
             this.displayCertificateDetailsButton.UseVisualStyleBackColor = true;
-            this.displayCertificateDetailsButton.Click += new System.EventHandler(this.displayCertificateDetails_Click);
+            this.displayCertificateDetailsButton.Click += new System.EventHandler(this.DisplayCertificateDetails_Click);
             // 
             // removeCertButton
             // 
@@ -138,7 +139,7 @@ namespace CertificateMultiAccessProvider
             this.removeCertButton.TabIndex = 30;
             this.removeCertButton.Text = "Remove selected...";
             this.removeCertButton.UseVisualStyleBackColor = true;
-            this.removeCertButton.Click += new System.EventHandler(this.removeCertButton_Click);
+            this.removeCertButton.Click += new System.EventHandler(this.RemoveCertButton_Click);
             // 
             // importButton
             // 
@@ -149,18 +150,18 @@ namespace CertificateMultiAccessProvider
             this.importButton.TabIndex = 55;
             this.importButton.Text = "Import config...";
             this.importButton.UseVisualStyleBackColor = true;
-            this.importButton.Click += new System.EventHandler(this.importButton_Click);
+            this.importButton.Click += new System.EventHandler(this.ImportButton_Click);
             // 
             // buttonAddPkcs11
             // 
             this.buttonAddPkcs11.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.buttonAddPkcs11.Location = new System.Drawing.Point(11, 221);
             this.buttonAddPkcs11.Name = "buttonAddPkcs11";
-            this.buttonAddPkcs11.Size = new System.Drawing.Size(146, 23);
+            this.buttonAddPkcs11.Size = new System.Drawing.Size(156, 23);
             this.buttonAddPkcs11.TabIndex = 25;
-            this.buttonAddPkcs11.Text = "Add PCKS11...";
+            this.buttonAddPkcs11.Text = "Add a certificate (PKCS11)...";
             this.buttonAddPkcs11.UseVisualStyleBackColor = true;
-            this.buttonAddPkcs11.Click += new System.EventHandler(this.buttonAddPkcs11_Click);
+            this.buttonAddPkcs11.Click += new System.EventHandler(this.ButtonAddPkcs11_Click);
             // 
             // buttonCancel
             // 
@@ -171,6 +172,7 @@ namespace CertificateMultiAccessProvider
             this.buttonCancel.TabIndex = 61;
             this.buttonCancel.Text = "Cancel";
             this.buttonCancel.UseVisualStyleBackColor = true;
+            this.buttonCancel.Click += new System.EventHandler(this.ButtonCancel_Click);
             // 
             // buttonMore
             // 
@@ -181,7 +183,7 @@ namespace CertificateMultiAccessProvider
             this.buttonMore.TabIndex = 63;
             this.buttonMore.Text = "Advanced   ▼";
             this.buttonMore.UseVisualStyleBackColor = true;
-            this.buttonMore.Click += new System.EventHandler(this.buttonMore_Click);
+            this.buttonMore.Click += new System.EventHandler(this.ButtonMore_Click);
             // 
             // contextMenuStrip1
             // 
@@ -196,14 +198,14 @@ namespace CertificateMultiAccessProvider
             this.toolStripMenuItemExportKey.Name = "toolStripMenuItemExportKey";
             this.toolStripMenuItemExportKey.Size = new System.Drawing.Size(216, 22);
             this.toolStripMenuItemExportKey.Text = "Export backing key as file...";
-            this.toolStripMenuItemExportKey.Click += new System.EventHandler(this.toolStripMenuItemExportKey_Click);
+            this.toolStripMenuItemExportKey.Click += new System.EventHandler(this.ToolStripMenuItemExportKey_Click);
             // 
             // toolStripMenuItemCustomKey
             // 
             this.toolStripMenuItemCustomKey.Name = "toolStripMenuItemCustomKey";
             this.toolStripMenuItemCustomKey.Size = new System.Drawing.Size(216, 22);
             this.toolStripMenuItemCustomKey.Text = "Set custom key...";
-            this.toolStripMenuItemCustomKey.Click += new System.EventHandler(this.toolStripMenuItemCustomKey_Click);
+            this.toolStripMenuItemCustomKey.Click += new System.EventHandler(this.ToolStripMenuItemCustomKey_Click);
             // 
             // KeyManagementForm
             // 

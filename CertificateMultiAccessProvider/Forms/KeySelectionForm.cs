@@ -1,4 +1,4 @@
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using KeePass.App;
 using KeePass.UI;
 
@@ -6,18 +6,19 @@ namespace CertificateMultiAccessProvider;
 
 public partial class KeySelectionForm : Form
 {
-    private readonly CertProviderConfig userPublicKeys;
+    private readonly CertProviderConfiguration _certProviderConfig;
+    private readonly Settings _settings;
 
     public X509Certificate2 SelectedCertificate { get; set; }
     public CertProvType SelectedType { get; internal set; }
 
-    public KeySelectionForm(CertProviderConfig publicKeys, string message = null)
+    public KeySelectionForm(CertProviderConfiguration certProviderConfig, Settings settings, string message = null)
     {
         InitializeComponent();
 
-        userPublicKeys = publicKeys;
+        _certProviderConfig = certProviderConfig;
+        _settings = settings;
 
-        listViewCertificate.Columns.Add("Type");
         listViewCertificate.Columns.Add("Subject");
         listViewCertificate.Columns.Add("Issuer");
         listViewCertificate.Columns.Add("Thumbprint");
@@ -41,25 +42,28 @@ public partial class KeySelectionForm : Form
 
     private void RefreshList()
     {
-        if (userPublicKeys.AllowedCertificates.Count == 0) return;
+        if (_certProviderConfig.AllowedCertificates.Count == 0) return;
 
         listViewCertificate.BeginUpdate();
         listViewCertificate.Items.Clear();
         listViewCertificate.ListViewItemSorter = null;
-        foreach (var p in userPublicKeys.AllowedCertificates)
+        foreach (var p in _certProviderConfig.AllowedCertificates)
         {
             var cert = p.ReadCertificate();
 
             var subject = cert.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
             var issuer = cert.GetNameInfo(X509NameType.SimpleName, forIssuer: true);
-            var item = new ListViewItem("type");
-            item.SubItems.AddRange(new List<string>() { subject, issuer, cert.Thumbprint }.ToArray());
+            var item = new ListViewItem(subject);
+            item.SubItems.AddRange(new List<string>() { issuer, cert.Thumbprint }.ToArray());
             item.Tag = p;
             listViewCertificate.Items.Add(item);
         }
 
         listViewCertificate.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
         listViewCertificate.EndUpdate();
+
+        listViewCertificate.Items[0].Selected = true;
+        listViewCertificate.Select();
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
@@ -87,7 +91,7 @@ public partial class KeySelectionForm : Form
 
     }
 
-    private void displayCertificateDetails_Click(object sender, EventArgs e)
+    private void DisplayCertificateDetails_Click(object sender, EventArgs e)
     {
         if (listViewCertificate.SelectedIndices.Count == 0)
         {
@@ -111,7 +115,7 @@ public partial class KeySelectionForm : Form
     }
 
 
-    private void selectCertificateButton_Click(object sender, EventArgs e)
+    private void SelectCertificateButton_Click(object sender, EventArgs e)
     {
         if (listViewCertificate.SelectedItems.Count == 0) { return; }
 
@@ -122,7 +126,7 @@ public partial class KeySelectionForm : Form
         }
     }
 
-    private void listViewCertificate_MouseDoubleClick(object sender, MouseEventArgs e)
+    private void ListViewCertificate_MouseDoubleClick(object sender, MouseEventArgs e)
     {
         var certificateInfo = (AllowedCertificate)listViewCertificate.SelectedItems[0]?.Tag;
         if (certificateInfo != null)
@@ -138,9 +142,9 @@ public partial class KeySelectionForm : Form
         DialogResult = DialogResult.OK;
     }
 
-    private void buttonPkcs11_Click(object sender, EventArgs e)
+    private void ButtonPkcs11_Click(object sender, EventArgs e)
     {
-        var form = new Pkcs11CertificateSelectionForm(null, userPublicKeys.AllowedCertificates.Select(k => k.Thumbprint));
+        var form = new Pkcs11CertificateSelectionForm(null, _settings, _certProviderConfig.AllowedCertificates.Select(k => k.Thumbprint));
         var dialogResult = form.ShowDialog(this);
 
         if (dialogResult == DialogResult.OK)

@@ -1,24 +1,18 @@
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using System.Xml.Serialization;
 using KeePassLib.Security;
 
 namespace CertificateMultiAccessProvider;
 
-//public enum CertType
-//{
-//    Certificate,
-//    InternalCertificate
-//}
 
 [XmlType("CertificateMultiAccessProvider")]
-public class CertProviderConfig
+public class CertProviderConfiguration
 {
     public List<AllowedCertificate> AllowedCertificates { get; private set; } = new List<AllowedCertificate>();
 
-    public CertProviderConfig Copy()
+    public CertProviderConfiguration Copy()
     {
-        return new CertProviderConfig()
+        return new CertProviderConfiguration()
         {
             AllowedCertificates = new(this.AllowedCertificates) { }
         };
@@ -48,9 +42,6 @@ public abstract class AllowedCertificate
     public byte[] EncryptedData { get; set; }
     public abstract AllowedCertificate Clone();
 
-    public abstract byte[] Decrypt(byte[] data);
-
-    public abstract byte[] Encrypt(byte[] data);
 
     /// <summary>
     /// Public certificate only
@@ -58,21 +49,7 @@ public abstract class AllowedCertificate
     /// <returns></returns>
     public abstract X509Certificate2 ReadCertificate();
 
-    internal void SetSecret(ProtectedBinary randomKey, byte[] iv, byte[] encryptedData)
-    {
-        RSA rsa;
-        var rsaPadding = RSAEncryptionPadding.OaepSHA256;
-        if ((rsa = ReadCertificate().GetRSAPublicKey()) != null)
-        {
-            EncryptedKey = rsa.Encrypt(randomKey.ReadData(), rsaPadding);
-            this.IV = iv;
-            this.EncryptedData = encryptedData;
-        }
-        else
-        {
-            throw new NotSupportedException("Certificate's key type not supported.");
-        }
-    }
+    internal abstract void SetSecret(ProtectedBinary randomKey, byte[] iv, byte[] encryptedData);
 }
 
 public interface ICertStoreProvider

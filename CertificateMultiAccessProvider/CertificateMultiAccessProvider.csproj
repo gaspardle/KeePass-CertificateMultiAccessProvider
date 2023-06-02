@@ -9,6 +9,9 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="ilmerge" Version="3.0.41" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Pkcs11Interop.X509Store\Pkcs11Interop.X509Store.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -27,5 +30,18 @@
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>
+  <ItemGroup>
+    <None Update="Pkcs11Interop.dll.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <Target Name="ILMerge">
+    <MakeDir Directories="$(TargetDir)merged"/>
+    <!-- the ILMergePath property points to the location of ILMerge.exe console application -->
+    <!--  /targetplatform:&quot;v4,C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0&quot; ^-->
+    <Exec 
+      Command="$(ILMergeConsolePath) /targetplatform:v4,&quot;C:\Windows\Microsoft.NET\Framework\v4.0.30319&quot; /out:$(TargetDir)merged/CertificateMultiAccessProvider.dll $(TargetDir)CertificateMultiAccessProvider.dll $(TargetDir)Pkcs11Interop.dll $(TargetDir)Pkcs11Interop.X509Store.dll" />
+  </Target>
   
 </Project>

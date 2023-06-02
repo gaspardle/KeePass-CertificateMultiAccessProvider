@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using KeePassLib.Cryptography.KeyDerivation;
 using KeePassLib.Security;
 
 namespace CertificateMultiAccessProvider.CertStore;
@@ -29,8 +30,17 @@ public class CertStoreInternal : ICertStoreProvider
         var password = AskPassword(subject);
         if (password == null) throw new InvalidOperationException("The specified password is not correct.");
 
-        var derivative = new Rfc2898DeriveBytes(password.ReadUtf8(), internalCertConfig.PrivateKeySalt, 120000, HashAlgorithmName.SHA256);
-        var privatePfxKey = new ProtectedBinary(true, derivative.GetBytes(32));
+
+        var kdf = new Argon2Kdf(Argon2Type.ID);
+        var pKdf = kdf.GetDefaultParameters();
+        pKdf.SetByteArray(Argon2Kdf.ParamSalt, internalCertConfig.PrivateKeySalt);
+        //pKdf.SetByteArray(Argon2Kdf.ParamAssocData, pbAssoc);
+        //pKdf.SetUInt64(Argon2Kdf.ParamIterations, uIt);
+        //pKdf.SetUInt32(Argon2Kdf.ParamParallelism, uPar);
+        //pKdf.SetUInt64(Argon2Kdf.ParamMemory, uMem);
+        var derivative = kdf.Transform(password.ReadUtf8(), pKdf);
+        var privatePfxKey = new ProtectedBinary(true, derivative, 0, 32);
+
         var decryptedPfx = CryptoHelpers.DecryptAES(internalCertConfig.PrivateKey, privatePfxKey, internalCertConfig.PrivateKeyIV);
 
         X509Certificate2 cert;
@@ -38,7 +48,7 @@ public class CertStoreInternal : ICertStoreProvider
         {
             cert = new X509Certificate2(decryptedPfx.ReadData(), password.ReadString(), X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable);
         }
-        catch (CryptographicException ex) when (ex.HResult == -2147024810)
+        catch (CryptographicException ex) when ((uint)ex.HResult == 0x80070056)
         {
             throw new InvalidOperationException("The specified password is not correct.");
         }

@@ -1,26 +1,32 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using KeePassLib.Security;
+using static CertificateMultiAccessProvider.CryptoHelpers;
 
 namespace CertificateMultiAccessProvider;
 
 public class AllowedCertificateRSA : AllowedCertificate
 {
     public const int CurrentVersion = 1;
+    public string RSAEncryptionPaddingName { get; set; }
+
 
     public AllowedCertificateRSA() { }
 
-    public static AllowedCertificateRSA Create(X509Certificate2 certificate)
+    public static AllowedCertificateRSA Create(X509Certificate2 certificate, AllowedRSAEncryptionPadding rsaEncryptionPadding)
     {
         if (certificate == null) throw new ArgumentNullException(nameof(certificate));
 
         return new()
         {
             Version = CurrentVersion,
-            // public part only        
-            Certificate = certificate.Export(X509ContentType.Cert),
+            Certificate = certificate.Export(X509ContentType.Cert),  // public part only       
             Thumbprint = certificate.Thumbprint,
+            RSAEncryptionPaddingName = rsaEncryptionPadding.Name
         };
     }
+
+    public AllowedRSAEncryptionPadding RSAEncryptionPadding => AllowedRSAEncryptionPadding.GetFromNameOrDefault(RSAEncryptionPaddingName);
 
     public override AllowedCertificate Clone()
     {
@@ -28,21 +34,19 @@ public class AllowedCertificateRSA : AllowedCertificate
         {
             Certificate = Certificate,
             Thumbprint = this.Thumbprint,
+            RSAEncryptionPaddingName = this.RSAEncryptionPaddingName,
         };
     }
 
-    public override byte[] Decrypt(byte[] data)
-    {
-        return null;
-    }
-
-    public override byte[] Encrypt(byte[] data)
+    internal override void SetSecret(ProtectedBinary randomKey, byte[] iv, byte[] encryptedData)
     {
         RSA rsa;
-        var rsaPadding = RSAEncryptionPadding.OaepSHA256;
-        if ((rsa = this.ReadCertificate().GetRSAPublicKey()) != null)
+        var rsaPadding = this.RSAEncryptionPadding ?? AllowedRSAEncryptionPadding.Default;
+        if ((rsa = ReadCertificate().GetRSAPublicKey()) != null)
         {
-            return rsa.Encrypt(data, rsaPadding);
+            EncryptedKey = rsa.Encrypt(randomKey.ReadData(), rsaPadding.Value);
+            this.IV = iv;
+            this.EncryptedData = encryptedData;
         }
         else
         {

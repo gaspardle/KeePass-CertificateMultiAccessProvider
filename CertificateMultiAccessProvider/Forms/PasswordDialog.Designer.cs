@@ -36,7 +36,7 @@ namespace CertificateMultiAccessProvider
             this.okButton.TabIndex = 20;
             this.okButton.Text = "Ok";
             this.okButton.UseVisualStyleBackColor = true;
-            this.okButton.Click += new System.EventHandler(this.okButton_Click);
+            this.okButton.Click += new System.EventHandler(this.OkButton_Click);
             // 
             // label2
             // 
@@ -58,7 +58,7 @@ namespace CertificateMultiAccessProvider
             this.cancelButton.TabIndex = 25;
             this.cancelButton.Text = "Cancel";
             this.cancelButton.UseVisualStyleBackColor = true;
-            this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
+            this.cancelButton.Click += new System.EventHandler(this.CancelButton_Click);
             // 
             // hidePasswordCheckBox
             // 
@@ -73,7 +73,7 @@ namespace CertificateMultiAccessProvider
             this.hidePasswordCheckBox.Text = "***";
             this.hidePasswordCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.hidePasswordCheckBox.UseVisualStyleBackColor = true;
-            this.hidePasswordCheckBox.CheckedChanged += new System.EventHandler(this.hidePasswordCheckBox_CheckedChanged);
+            this.hidePasswordCheckBox.CheckedChanged += new System.EventHandler(this.HidePasswordCheckBox_CheckedChanged);
             // 
             // securePassphraseTextBox
             // 

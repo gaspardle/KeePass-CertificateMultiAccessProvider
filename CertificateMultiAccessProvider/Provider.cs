@@ -23,12 +23,15 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
     public const string DefaultKeyExtension = ".mcspkey";
     public const string ConfigPrefix = "certmultiaccess";
 
-    public CertProviderConfig certProviderConfig;
+    public CertProviderConfiguration _certProviderConfig;
+    public Settings Settings { get; private set; }
+
     private readonly IPluginHost _host;
 
     public CertificateMultiAccessProvider(IPluginHost host)
     {
         this._host = host;
+        this.Settings = new Settings(host.CustomConfig);
     }
 
     public override string Name
@@ -47,11 +50,11 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         // The key file is expected to be next to the database by default:
         var keyFilePath = UrlUtil.StripExtension(ctx.DatabasePath) + DefaultKeyExtension;
 
-        certProviderConfig = new CertProviderConfig();
+        _certProviderConfig = new CertProviderConfiguration();
 
         if (ctx.CreatingNewKey)
         {
-            using var form = new KeyManagementForm(keyFilePath, certProviderConfig, this, keyCreation: true);
+            using var form = new KeyManagementForm(keyFilePath, _certProviderConfig, this, keyCreation: true);
             var res = form.ShowDialog();
             if (res != DialogResult.OK)
             {
@@ -65,44 +68,29 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
             ReadCertificatesConfig(dbHeader);
         }
 
-        /*while (!File.Exists(keyFilePath))
-        {
-            var ofd = new OpenFileDialogEx("Select your CertificateMultiAccess Key file.")
-            {
-                Filter = $"CertificateMultiAccess Provider Key files (*{DefaultKeyExtension})|*{DefaultKeyExtension}|All files (*.*)|*.*"
-            };
-            if (ofd.ShowDialog() != DialogResult.OK)
-            {
-                return null;
-            }
-            else
-            {
-                keyFilePath = ofd.FileName;
-            }
-        }*/
 
         X509Certificate2 cert = null;
-        CertProvType type = CertProvType.CAPI;
+        var type = CertProvType.CAPI;
 
         //capi
-        if (/*showCAPICertsByDefault &&*/ certProviderConfig.AllowedCertificates.Any(k => k is AllowedCertificateRSA))
+        if (Settings.UseCAPIByDefault && _certProviderConfig.AllowedCertificates.Any(k => k is AllowedCertificateRSA))
         {
-            cert = CertStoreCAPI.SelectCertificate("Select a certificate.", certProviderConfig.AllowedCertificates.Select(k => k.Thumbprint), GlobalWindowManager.TopWindow?.Handle);
+            cert = CertStoreCAPI.SelectCertificate("Select a certificate.", _certProviderConfig.AllowedCertificates.Select(k => k.Thumbprint), GlobalWindowManager.TopWindow?.Handle);
             type = CertProvType.CAPI;
         }
 
         if (cert == null)
         {
-            (cert, type) = CryptoHelpers.ShowCertificateSelection("Select a current valid certificate.", certProviderConfig);
+            (cert, type) = CryptoHelpers.ShowCertificateSelection("Select a current valid certificate.", _certProviderConfig, Settings);
         }
 
-        if(cert == null)
+        if (cert == null)
         {
             MessageService.ShowWarning("You must select a certificate.");
             return null;
         }
 
-        AllowedCertificate certInfo = certProviderConfig.AllowedCertificates.Where(p => p.Thumbprint == cert.Thumbprint).FirstOrDefault();
+        AllowedCertificate certInfo = _certProviderConfig.AllowedCertificates.Where(p => p.Thumbprint == cert.Thumbprint).FirstOrDefault();
 
         if (certInfo == null)
         {
@@ -115,8 +103,7 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         ProtectedBinary secretKey = null;
         try
         {
-            //secretKey = CryptoHelpers.DecryptSecretFromConfig(pkcs11Provider, certInfo);
-            secretKey = CryptoHelpers.DecryptSecretFromConfig(certInfo, type);
+            secretKey = CryptoHelpers.DecryptSecretFromConfig(certInfo, type, Settings);
         }
         catch (Exception)
         {
@@ -138,17 +125,17 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         if (compressedBytes == null) return false;
 
 
-        using MemoryStream memoryStream = new MemoryStream(compressedBytes);
+        using var memoryStream = new MemoryStream(compressedBytes);
         var configBytes = MemUtil.Decompress(memoryStream.ToArray());
 
-        certProviderConfig = XmlUtilEx.Deserialize<CertProviderConfig>(new MemoryStream(configBytes));
+        _certProviderConfig = XmlUtilEx.Deserialize<CertProviderConfiguration>(new MemoryStream(configBytes));
         return true;
     }
 
     internal void SaveCertificatesConfig(PwDatabase database)
     {
-        using MemoryStream memoryStream = new MemoryStream();
-        XmlUtilEx.Serialize(memoryStream, certProviderConfig);
+        using var memoryStream = new MemoryStream();
+        XmlUtilEx.Serialize(memoryStream, _certProviderConfig);
 
         var configBytes = memoryStream.ToArray();
         var compressedBytes = MemUtil.Compress(configBytes);
@@ -164,8 +151,9 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         this._host.MainWindow.UpdateUI(false, null, false, null, false, null, true);
     }
 
-    internal void ValidateConfig(PwDatabase database)
+    internal bool ValidateConfig(PwDatabase database)
     {
+        return true;
         /*var configBytes = database.PublicCustomData.GetByteArray($"{ConfigPrefix}.config");
         if (configBytes == null)
         {
@@ -180,20 +168,16 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         }*/
     }
 
-    internal static CertProviderConfig ImportConfig(string path)
+    internal static CertProviderConfiguration ImportConfig(string path)
     {
-        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
-        {
-            return XmlUtilEx.Deserialize<CertProviderConfig>(fs);
-        }
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+        return XmlUtilEx.Deserialize<CertProviderConfiguration>(fs);
 
     }
 
-    internal static void ExportConfig(string path, CertProviderConfig config)
+    internal static void ExportConfig(string path, CertProviderConfiguration config)
     {
-        using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
-        {
-            XmlUtilEx.Serialize(fs, config);
-        }
+        using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        XmlUtilEx.Serialize(fs, config);
     }
 }

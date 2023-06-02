@@ -1,4 +1,4 @@
-using KeePass.App;
+﻿using KeePass.App;
 using KeePass.UI;
 using KeePassLib.Security;
 
@@ -14,14 +14,14 @@ public partial class PinDialog : Form
         if (text != null) labelTitle.Text = text;
     }
 
-    private void okButton_Click(object sender, EventArgs e)
+    private void OkButton_Click(object sender, EventArgs e)
     {
         if (securePassphraseTextBox.TextLength == 0)
         {
             MessageBox.Show("Can't be empty");
             return;
         }
-
+        
         this.Pin = securePassphraseTextBox.TextEx;
         DialogResult = DialogResult.OK;
     }
@@ -37,7 +37,7 @@ public partial class PinDialog : Form
         GlobalWindowManager.RemoveWindow(this);
     }
 
-    private void hidePasswordCheckBox_CheckedChanged(object sender, EventArgs e)
+    private void HidePasswordCheckBox_CheckedChanged(object sender, EventArgs e)
     {
         bool hide = hidePasswordCheckBox.Checked;
         if (!hide && !AppPolicy.Try(AppPolicyId.UnhidePasswords))

@@ -1,4 +1,4 @@
-using KeePassLib.Security;
+﻿using KeePassLib.Security;
 using Net.Pkcs11Interop.X509Store;
 
 namespace CertificateMultiAccessProvider;

@@ -7,19 +7,21 @@ namespace CertificateMultiAccessProvider;
 public partial class Pkcs11CertificateSelectionForm : Form
 {
     private Pkcs11X509Store _store;
-    private IEnumerable<string> _thumbprints;
+    private readonly IEnumerable<string> _thumbprints;
+    private readonly Settings _settings;
 
     public Pkcs11X509Certificate SelectedCertificate { get; internal set; } //XXX X509Certificate2
 
-    public Pkcs11CertificateSelectionForm(string title, IEnumerable<string> thumbprints = null)
+    public Pkcs11CertificateSelectionForm(string title, Settings settings, IEnumerable<string> thumbprints = null)
     {
         InitializeComponent();
-        _thumbprints = thumbprints ?? new string[] { };
+        _thumbprints = thumbprints ?? Array.Empty<string>();
+        _settings = settings;
     }
 
     private void Pkcs11CertificateSelectionForm_Load(object sender, EventArgs e)
     {
-        textBoxLibraryPath.Text = @"C:\Program Files\Yubico\Yubico PIV Tool\bin\libykcs11.dll";
+        textBoxLibraryPath.Text = _settings.Pkcs11LibPath;
     }
 
     private void Pkcs11CertificateSelectionForm_Shown(object sender, EventArgs e)
@@ -40,23 +42,23 @@ public partial class Pkcs11CertificateSelectionForm : Form
         {
             treeViewPKCS11.Nodes.Add(new TreeNode($"(No slot or reader available)"));
         }
-        foreach (var s in _store.Slots)
+        foreach (var slot in _store.Slots)
         {
-            TreeNode newSlotNode = new TreeNode($"Slot: {s.Info.Manufacturer} {s.Info.Description}");
+            var newSlotNode = new TreeNode($"Slot: {slot.Info.Manufacturer} {slot.Info.Description}");
             treeViewPKCS11.Nodes.Add(newSlotNode);
 
-            TreeNode newTokenNode = new TreeNode($"Token: {s.Token.Info.Label} {s.Token.Info.Manufacturer} - {s.Token.Info.Initialized}");
+            var newTokenNode = new TreeNode($"Token: {slot.Token.Info.Label} {slot.Token.Info.Manufacturer}");
             newSlotNode.Nodes.Add(newTokenNode);
-            //newSlotNode.ExpandAll();
-            foreach (var c in s.Token.Certificates)
+
+            foreach (var certificate in slot.Token.Certificates)
             {
-                var parsedCertificate = c.Info.ParsedCertificate;
-                TreeNode newCertNode = new TreeNode($"({c.Info.Id}) - {c.Info.Label} - {c.Info.KeyType}");
-                newCertNode.Tag = c;
-                if (_thumbprints.Contains(parsedCertificate.Thumbprint))
+                var parsedCertificate = certificate.Info.ParsedCertificate;
+                var newCertNode = new TreeNode($"({certificate.Info.Id}) - {certificate.Info.Label} - {certificate.Info.KeyType}")
                 {
-                    newCertNode.BackColor = Color.LightGreen;
-                }
+                    Tag = certificate,
+                    BackColor = _thumbprints.Contains(parsedCertificate.Thumbprint) ? Color.LightGreen : Color.Empty
+                };
+
                 newTokenNode.Nodes.Add(newCertNode);
             }
         }
@@ -66,18 +68,21 @@ public partial class Pkcs11CertificateSelectionForm : Form
         label2.Text = "(Select a certificate)";
     }
 
-    private void buttonLoadLibrary_Click(object sender, EventArgs e)
+    private void ButtonLoadLibrary_Click(object sender, EventArgs e)
     {
         LoadPKCS11Library();
     }
 
     private void LoadPKCS11Library()
     {
+        var libPath = textBoxLibraryPath.Text;
+        _settings.Pkcs11LibPath = libPath;
+
         treeViewPKCS11.Nodes.Clear();
 
         try
         {
-            _store = new Pkcs11X509Store(textBoxLibraryPath.Text, new PinProvider());
+            _store = new Pkcs11X509Store(libPath, new PinProvider());
         }
         catch (Exception ex)
         {
@@ -85,20 +90,6 @@ public partial class Pkcs11CertificateSelectionForm : Form
             return;
         }
         label1.Text = _store.Info.Manufacturer + Environment.NewLine + _store.Info.Description;
-        //provider.SaveCustomSetting("pkcs11_lib_path", textBoxLibraryPath.Text);
-
-        //----------------
-        //try
-        //{
-        //    ShowWindowsX509Certificate2UI();
-        //}
-        //catch (Exception ex)
-        //{
-        //    MessageService.ShowWarning(ex.Message);
-        //}
-        //return;
-
-        //---------------
 
         RefreshList();
 
@@ -106,54 +97,55 @@ public partial class Pkcs11CertificateSelectionForm : Form
         this.AcceptButton = buttonOk;
     }
 
-    private void ShowWindowsX509Certificate2UI()
+    //private void ShowWindowsX509Certificate2UI()
+    //{
+    //    var collection = new X509Certificate2Collection();
+
+    //    foreach (var slot in _store.Slots)
+    //    {
+    //        foreach (var certificate in slot.Token.Certificates)
+    //        {
+    //            var parsedCertificate = certificate.Info.ParsedCertificate;
+    //            collection.Add(parsedCertificate);
+    //        }
+    //    }
+
+    //    var selection = X509Certificate2UI.SelectFromCollection(
+    //        collection,
+    //        _store.Info.Manufacturer,
+    //        "Select a certificate",
+    //        X509SelectionFlag.SingleSelection, this.Handle)
+    //        .Cast<X509Certificate2>().SingleOrDefault();
+
+    //    if (selection != null)
+    //    {
+    //        var pkcsCert = (Pkcs11X509Certificate)_store.Slots
+    //            .SelectMany(slot => slot.Token.Certificates
+    //            .Where(cert => selection.Thumbprint == cert.Info.ParsedCertificate.Thumbprint))
+    //            .FirstOrDefault();
+    //        SelectedCertificate = pkcsCert;
+    //        DialogResult = DialogResult.OK;
+    //    }
+    //}
+
+    private void ButtonOk_Click(object sender, EventArgs e)
     {
-        X509Certificate2Collection collection = new X509Certificate2Collection();
-
-        foreach (var s in _store.Slots)
+        if (treeViewPKCS11.SelectedNode != null && treeViewPKCS11.SelectedNode.Tag is Pkcs11X509Certificate pkcsCert)
         {
-            foreach (var c in s.Token.Certificates)
-            {
-                var parsedCertificate = c.Info.ParsedCertificate;
-                collection.Add(parsedCertificate);
-            }
-        }
-
-        var selection = X509Certificate2UI.SelectFromCollection(
-            collection,
-            _store.Info.Manufacturer,
-            "Select a certificate",
-            X509SelectionFlag.SingleSelection, this.Handle)
-            .Cast<X509Certificate2>().SingleOrDefault();
-
-        if (selection != null)
-        {
-            var pkcsCert = (Pkcs11X509Certificate)_store.Slots.SelectMany(v => v.Token.Certificates.Where(c => selection.Thumbprint == c.Info.ParsedCertificate.Thumbprint)).FirstOrDefault();
             SelectedCertificate = pkcsCert;
             DialogResult = DialogResult.OK;
         }
     }
 
-    private void buttonOk_Click(object sender, EventArgs e)
-    {
-        if (treeViewPKCS11.SelectedNode != null && treeViewPKCS11.SelectedNode.Tag is Pkcs11X509Certificate)
-        {
-            var pkcsCert = (Pkcs11X509Certificate)treeViewPKCS11.SelectedNode.Tag;
-            SelectedCertificate = pkcsCert;
-            DialogResult = DialogResult.OK;
-        }
-    }
-
-    private void buttonCancel_Click(object sender, EventArgs e)
+    private void ButtonCancel_Click(object sender, EventArgs e)
     {
         DialogResult = DialogResult.Cancel;
     }
 
-    private void treeViewPKCS11_AfterSelect(object sender, TreeViewEventArgs e)
+    private void TreeViewPKCS11_AfterSelect(object sender, TreeViewEventArgs e)
     {
-        if (e.Node.Tag is Pkcs11X509Certificate)
+        if (e.Node.Tag is Pkcs11X509Certificate pkcsCert)
         {
-            var pkcsCert = (Pkcs11X509Certificate)e.Node.Tag;
             var cert = pkcsCert.Info.ParsedCertificate;
 
             label2.Text = "Subject: " + cert.Subject + Environment.NewLine + "Issuer: " + cert.Issuer + "\nThumbprint: " + cert.Thumbprint + "\nHas private key: " + pkcsCert.HasPrivateKeyObject;
@@ -164,16 +156,16 @@ public partial class Pkcs11CertificateSelectionForm : Form
         }
     }
 
-    private void buttonBrowse_Click(object sender, EventArgs e)
+    private void ButtonBrowse_Click(object sender, EventArgs e)
     {
         var ofd = new OpenFileDialogEx("");
         if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
         {
-            ofd.Filter = $"SO files|*so|All files (*.*)|*.*";
+            ofd.Filter = $".so files|*.so;*.so.*|All files (*.*)|*.*";
         }
         else
         {
-            ofd.Filter = $"DLL files|*dll|All files (*.*)|*.*";
+            ofd.Filter = $"Dll files|*.dll|All files (*.*)|*.*";
         }
         if (ofd.ShowDialog() == DialogResult.OK)
         {

@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using CertificateMultiAccessProvider.CertStore;
 using KeePassLib.Cryptography;
@@ -12,9 +12,26 @@ namespace CertificateMultiAccessProvider;
 public static class CryptoHelpers
 {
 
-    public static (X509Certificate2, CertProvType) ShowCertificateSelection(string message, CertProviderConfig certProviderConfig, Form parent = null)
+    public record AllowedRSAEncryptionPadding(RSAEncryptionPadding Value, string Name, string DisplayName)
     {
-        using var form = new KeySelectionForm(certProviderConfig, message);
+        public static AllowedRSAEncryptionPadding[] List { get; } =
+            new[]
+            {
+                new AllowedRSAEncryptionPadding(RSAEncryptionPadding.OaepSHA256, "OAEPSHA256", "OAEP SHA256"),
+                new AllowedRSAEncryptionPadding(RSAEncryptionPadding.OaepSHA384, "OAEPSHA384", "OAEP SHA384"),
+                new AllowedRSAEncryptionPadding(RSAEncryptionPadding.OaepSHA512, "OAEPSHA512", "OAEP SHA512"),
+                new AllowedRSAEncryptionPadding(RSAEncryptionPadding.OaepSHA1, "OAEPSHA1", "OAEP SHA1"),
+                new AllowedRSAEncryptionPadding(RSAEncryptionPadding.Pkcs1, "PKCS1", "PKCS #1 (Legacy)")
+            };
+
+        public static AllowedRSAEncryptionPadding Default => List[0];
+        public static AllowedRSAEncryptionPadding GetFromNameOrDefault(string name) => List.SingleOrDefault(x => x.Name == name) ?? Default;
+        public static AllowedRSAEncryptionPadding GetFromName(string name) => List.Single(x => x.Name == name);
+    }
+
+    internal static (X509Certificate2, CertProvType) ShowCertificateSelection(string message, CertProviderConfiguration certProviderConfig, Settings settings, Form parent = null)
+    {
+        using var form = new KeySelectionForm(certProviderConfig, settings, message);
         form.Parent = parent;
 
         if (form.ShowDialog() != DialogResult.OK)
@@ -32,32 +49,30 @@ public static class CryptoHelpers
         {
             hashBytes = hasher.ComputeHash(cert.RawData);
         }
-        string result = BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLower();
-        return result;
+
+        return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLower();
     }
 
-    public static X509Certificate2 buildSelfSignedServerCertificate(string subject)
+    public static X509Certificate2 GenerateSelfSignedCertificate(string subject)
     {
-        X500DistinguishedName distinguishedName = new X500DistinguishedName($"CN={subject}");
+        var distinguishedName = new X500DistinguishedName($"CN={subject}");
 
-        using (RSA rsa = RSA.Create(4096))
-        {
-            var request = new CertificateRequest(distinguishedName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var rsa = RSA.Create(4096);
+        var request = new CertificateRequest(distinguishedName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-            request.CertificateExtensions.Add(
-                new X509KeyUsageExtension(
-                    X509KeyUsageFlags.DataEncipherment
-                    | X509KeyUsageFlags.KeyEncipherment
-                    | X509KeyUsageFlags.DigitalSignature, false));
+        request.CertificateExtensions.Add(
+            new X509KeyUsageExtension(
+                X509KeyUsageFlags.DataEncipherment
+                | X509KeyUsageFlags.KeyEncipherment
+                | X509KeyUsageFlags.DigitalSignature, false));
 
-            var certificate = request.CreateSelfSigned(
-                new DateTimeOffset(DateTime.UtcNow),
-                new DateTimeOffset(DateTime.UtcNow.AddYears(50)));
+        var certificate = request.CreateSelfSigned(
+            new DateTimeOffset(DateTime.UtcNow),
+            new DateTimeOffset(DateTime.UtcNow.AddYears(50)));
 
-            certificate.FriendlyName = $"{subject}";
+        certificate.FriendlyName = $"{subject}";
 
-            return certificate;
-        }
+        return certificate;
     }
 
     public static void SetSecretKeyFromNewUserKey(AllowedCertificate certInfo, ProtectedBinary secretKey)
@@ -75,7 +90,7 @@ public static class CryptoHelpers
         certInfo.SetSecret(randomKey, iv, encryptedData);
     }
 
-    public static ProtectedBinary DecryptSecretFromConfig(AllowedCertificate certInfo, CertProvType providerType)
+    public static ProtectedBinary DecryptSecretFromConfig(AllowedCertificate certInfo, CertProvType providerType, Settings settings)
     {
         ICertStoreProvider certStoreProv;
         if (providerType == CertProvType.InternalCertificate && certInfo is AllowedCertificateRSAInternal)
@@ -84,7 +99,7 @@ public static class CryptoHelpers
         }
         else if (providerType == CertProvType.Pkcs11)
         {
-            certStoreProv = new CertStorePkcs11(@"C:\Program Files\Yubico\Yubico PIV Tool\bin\libykcs11.dll");
+            certStoreProv = new CertStorePkcs11(settings.Pkcs11LibPath);
         }
         else
         {
@@ -136,16 +151,6 @@ public static class CryptoHelpers
         stream.CopyTo(ms);
 
         return ms.ToArray();
-        //var buffer = new byte[32768];
-        //using var ms = new MemoryStream();
-        //while (true)
-        //{
-        //    int read = stream.Read(buffer, 0, buffer.Length);
-        //    if (read <= 0)
-        //        return ms.ToArray();
-        //    else
-        //        ms.Write(buffer, 0, read);
-        //}
     }
 }
 
