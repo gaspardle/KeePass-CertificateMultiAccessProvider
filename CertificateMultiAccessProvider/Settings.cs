@@ -1,4 +1,4 @@
-﻿using KeePass.App.Configuration;
+using KeePass.App.Configuration;
 
 namespace CertificateMultiAccessProvider;
 
@@ -35,5 +35,5 @@ public class Settings
         get { return _config.GetBool("AllowUnsecureDeletion", false); }
         set { _config.SetBool("AllowUnsecureDeletion", value); }
     }
-    
+
 }

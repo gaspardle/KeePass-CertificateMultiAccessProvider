@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using CertificateMultiAccessProvider.CertStore;
 using KeePass.App;
 using KeePass.UI;
+using KeePassLib;
 using KeePassLib.Cryptography;
 using KeePassLib.Security;
 using KeePassLib.Serialization;
@@ -16,38 +17,42 @@ namespace CertificateMultiAccessProvider;
 public partial class KeyManagementForm : Form
 {
     private ProtectedBinary _secretKey;
-    private readonly CertProviderConfiguration _certProviderConfigCopy;
-    private readonly CertProviderConfiguration _certProviderConfig;
-    private readonly bool _isKeyCreation;
+    //private readonly CertProviderConfiguration _certProviderConfig;
+    private readonly bool _isKeyCreation = false;
     private readonly bool _allowNotSecureRemoval = false;
     private readonly CertificateMultiAccessProvider _provider;
     private string _keyFileDefaultLocation;
+    private readonly PwDatabase _database;
+    private readonly string _dbpath;
 
-    public X509Certificate2 SelectedCertificate { get; set; }
+    public CertProviderConfiguration CertProviderConfig { get; }
 
 
-    public KeyManagementForm(string keyFileDefaultLocation, CertProviderConfiguration certProviderConfig, CertificateMultiAccessProvider provider, bool keyCreation = false)
+    public KeyManagementForm(CertificateMultiAccessProvider provider, CertProviderConfiguration certProviderConfig, PwDatabase database)
     {
         InitializeComponent();
 
-        _certProviderConfigCopy = certProviderConfig.Copy();
-        _certProviderConfig = certProviderConfig;
-        _isKeyCreation = keyCreation;
-        _allowNotSecureRemoval = provider.Settings.AllowUnsecureDeletion;
-        _keyFileDefaultLocation = keyFileDefaultLocation;
         _provider = provider;
+        CertProviderConfig = certProviderConfig.Copy();
+        //_allowNotSecureRemoval = provider.Settings.AllowUnsecureDeletion;
 
-        listViewCertificate.Columns.Add("Subject");
-        listViewCertificate.Columns.Add("Issuer");
-        listViewCertificate.Columns.Add("Thumbprint");
+        _database = database;
 
-        if (keyCreation)
+    }
+    public KeyManagementForm(CertificateMultiAccessProvider provider, CertProviderConfiguration certProviderConfig, string dbpath)
+    {
+        InitializeComponent();
+
+        _provider = provider;
+        CertProviderConfig = certProviderConfig.Copy();
+        //_allowNotSecureRemoval = provider.Settings.AllowUnsecureDeletion;
+
+        _dbpath = dbpath;
+        _isKeyCreation = true;
+        _secretKey = new ProtectedBinary(true, CryptoRandom.Instance.GetRandomBytes(32));
+        if ((_secretKey == null) || (_secretKey.Length != 32))
         {
-            _secretKey = new ProtectedBinary(true, CryptoRandom.Instance.GetRandomBytes(32));
-            if ((_secretKey == null) || (_secretKey.Length != 32))
-            {
-                throw new SecurityException();
-            }
+            throw new SecurityException();
         }
     }
 
@@ -59,18 +64,22 @@ public partial class KeyManagementForm : Form
 
         Icon = AppIcons.Default;
 
+        listViewCertificate.Columns.Add("Subject");
+        listViewCertificate.Columns.Add("Issuer");
+        listViewCertificate.Columns.Add("Thumbprint");
+
         RefreshList();
     }
 
     private void RefreshList()
     {
-        if (_certProviderConfigCopy.AllowedCertificates.Count == 0) return;
+        if (CertProviderConfig.AllowedCertificates.Count == 0) return;
 
         listViewCertificate.BeginUpdate();
         listViewCertificate.Items.Clear();
         listViewCertificate.ListViewItemSorter = null;
 
-        foreach (var p in _certProviderConfigCopy.AllowedCertificates)
+        foreach (var p in CertProviderConfig.AllowedCertificates)
         {
             var cert = p.ReadCertificate();
 
@@ -105,14 +114,14 @@ public partial class KeyManagementForm : Form
     {
         if (_secretKey == null)
         {
-            var (cert, certProvType) = CryptoHelpers.ShowCertificateSelection("Select a current certificate to confirm the addition of a new certificate.", _certProviderConfigCopy, _provider.Settings);
+            var (cert, certProvType) = CryptoHelpers.ShowCertificateSelection("Select a current certificate to confirm the addition of a new certificate.", CertProviderConfig, _provider.Settings);
             if (cert == null)
             {
                 MessageService.ShowWarning("You must select a certificate.");
                 return false;
             }
 
-            var certInfo = _certProviderConfigCopy.AllowedCertificates.Where(p => p.Thumbprint == cert.Thumbprint).FirstOrDefault();
+            var certInfo = CertProviderConfig.AllowedCertificates.Where(p => p.Thumbprint == cert.Thumbprint).FirstOrDefault();
 
             this.Enabled = false;
             try
@@ -144,7 +153,7 @@ public partial class KeyManagementForm : Form
         var certificate = CertStoreCAPI.SelectCertificate("Select the certificate to add as an authentication method.", hwnd: this.Handle);
         if (certificate == null) return;
 
-        if (_certProviderConfigCopy.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
+        if (CertProviderConfig.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
         {
             MessageBox.Show("Certificate is already present.");
             return;
@@ -170,7 +179,7 @@ public partial class KeyManagementForm : Form
 
     private void ButtonAddPkcs11_Click(object sender, EventArgs e)
     {
-        var form = new Pkcs11CertificateSelectionForm(null, _provider.Settings, _certProviderConfigCopy.AllowedCertificates.Select(k => k.Thumbprint));
+        var form = new Pkcs11CertificateSelectionForm(null, _provider.Settings, CertProviderConfig.AllowedCertificates.Select(k => k.Thumbprint));
         var dialogResult = form.ShowDialog();
 
         if (dialogResult == DialogResult.OK)
@@ -179,7 +188,7 @@ public partial class KeyManagementForm : Form
             if (pkcsCertificate == null) return;
 
             var certificate = pkcsCertificate.Info.ParsedCertificate;
-            if (_certProviderConfigCopy.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
+            if (CertProviderConfig.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
             {
                 MessageBox.Show("Certificate is already present.");
                 return;
@@ -217,7 +226,7 @@ public partial class KeyManagementForm : Form
         try
         {
             CryptoHelpers.SetSecretKeyFromNewUserKey(certInfo, _secretKey);
-            _certProviderConfigCopy.AllowedCertificates.Add(certInfo);
+            CertProviderConfig.AllowedCertificates.Add(certInfo);
         }
         catch (Exception ex)
         {
@@ -230,7 +239,7 @@ public partial class KeyManagementForm : Form
 
     private void ButtonOk_Click(object sender, EventArgs e)
     {
-        if (_certProviderConfigCopy.AllowedCertificates.Count == 0)
+        if (CertProviderConfig.AllowedCertificates.Count == 0)
         {
             MessageService.ShowWarning("You must add at least one certificate.");
             return;
@@ -241,8 +250,14 @@ public partial class KeyManagementForm : Form
             MessageService.ShowWarning("Changes will be committed when the database is saved in KeePass.");
         }
 
-        _certProviderConfig.AllowedCertificates.Clear();
-        _certProviderConfig.AllowedCertificates.AddRange(_certProviderConfigCopy.AllowedCertificates);
+        if (_isKeyCreation)
+        {
+            _provider.AddTemporaryCreatedConfig(_dbpath, CertProviderConfig);
+        }
+        else
+        {
+            _provider.SaveCertificatesConfig(CertProviderConfig, _database);
+        }
 
         _provider.SetModified();
         DialogResult = DialogResult.OK;
@@ -317,7 +332,7 @@ public partial class KeyManagementForm : Form
 
             if (result == DialogResult.Yes)
             {
-                _certProviderConfigCopy.AllowedCertificates.Remove(item);
+                CertProviderConfig.AllowedCertificates.Remove(item);
                 RefreshList();
             }
         }
@@ -342,7 +357,7 @@ public partial class KeyManagementForm : Form
         {
             _keyFileDefaultLocation = sfd.FileName;
 
-            CertificateMultiAccessProvider.ExportConfig(sfd.FileName, _certProviderConfigCopy);
+            CertificateMultiAccessProvider.ExportConfig(sfd.FileName, CertProviderConfig);
         }
     }
     private void ImportButton_Click(object sender, EventArgs e)
@@ -368,10 +383,10 @@ public partial class KeyManagementForm : Form
                 foreach (var certInfo in config.AllowedCertificates)
                 {
                     var newCertInfo = certInfo.Clone();
-                    if (!_certProviderConfigCopy.AllowedCertificates.Any(c => c.Thumbprint == newCertInfo.Thumbprint))
+                    if (!CertProviderConfig.AllowedCertificates.Any(c => c.Thumbprint == newCertInfo.Thumbprint))
                     {
                         CryptoHelpers.SetSecretKeyFromNewUserKey(newCertInfo, _secretKey);
-                        _certProviderConfigCopy.AllowedCertificates.Add(newCertInfo);
+                        CertProviderConfig.AllowedCertificates.Add(newCertInfo);
                         count++;
                     }
                 }

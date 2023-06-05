@@ -23,10 +23,11 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
     public const string DefaultKeyExtension = ".mcspkey";
     public const string ConfigPrefix = "certmultiaccess";
 
-    public CertProviderConfiguration _certProviderConfig;
     public Settings Settings { get; private set; }
 
     private readonly IPluginHost _host;
+
+    private readonly Dictionary<string, CertProviderConfiguration> _temporaryCreatedConfigs = new();
 
     public CertificateMultiAccessProvider(IPluginHost host)
     {
@@ -39,33 +40,32 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         get { return "CertificateMultiAccess Provider"; }
     }
 
-    public override bool SecureDesktopCompatible => true;
+    public override bool SecureDesktopCompatible => false;
 
     public override bool GetKeyMightShowGui => true;
 
     public override byte[] GetKey(KeyProviderQueryContext ctx)
     {
+        //ctx.IsOnSecureDesktop;
+
         if (ctx == null) throw new ArgumentNullException(nameof(ctx));
 
-        // The key file is expected to be next to the database by default:
-        var keyFilePath = UrlUtil.StripExtension(ctx.DatabasePath) + DefaultKeyExtension;
-
-        _certProviderConfig = new CertProviderConfiguration();
+        CertProviderConfiguration _certProviderConfig;
 
         if (ctx.CreatingNewKey)
         {
-            using var form = new KeyManagementForm(keyFilePath, _certProviderConfig, this, keyCreation: true);
+            using var form = new KeyManagementForm(this, new CertProviderConfiguration(), ctx.DatabasePath);
             var res = form.ShowDialog();
             if (res != DialogResult.OK)
             {
                 return null;
             }
+            _certProviderConfig = form.CertProviderConfig;
         }
         else
         {
             // Load allowed keys from header data
-            var dbHeader = PwDatabase.LoadHeader(ctx.DatabaseIOInfo);
-            ReadCertificatesConfig(dbHeader);
+            _certProviderConfig = ReadCertificatesConfig(PwDatabase.LoadHeader(ctx.DatabaseIOInfo));
         }
 
 
@@ -118,24 +118,23 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         return secretKey.ReadData();
     }
 
-    internal bool ReadCertificatesConfig(PwDatabase database)
+    internal CertProviderConfiguration ReadCertificatesConfig(PwDatabase database)
     {
         var compressedBytes = database.PublicCustomData.GetByteArray($"{ConfigPrefix}.config");
 
-        if (compressedBytes == null) return false;
-
+        if (compressedBytes == null) return null;
 
         using var memoryStream = new MemoryStream(compressedBytes);
         var configBytes = MemUtil.Decompress(memoryStream.ToArray());
 
-        _certProviderConfig = XmlUtilEx.Deserialize<CertProviderConfiguration>(new MemoryStream(configBytes));
-        return true;
+        var certProviderConfig = XmlUtilEx.Deserialize<CertProviderConfiguration>(new MemoryStream(configBytes));
+        return certProviderConfig;
     }
 
-    internal void SaveCertificatesConfig(PwDatabase database)
+    internal void SaveCertificatesConfig(CertProviderConfiguration certProviderConfig, PwDatabase database)
     {
         using var memoryStream = new MemoryStream();
-        XmlUtilEx.Serialize(memoryStream, _certProviderConfig);
+        XmlUtilEx.Serialize(memoryStream, certProviderConfig);
 
         var configBytes = memoryStream.ToArray();
         var compressedBytes = MemUtil.Compress(configBytes);
@@ -143,7 +142,7 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         database.PublicCustomData.SetByteArray($"{ConfigPrefix}.config", compressedBytes);
 
         var hash = BitConverter.ToString(CryptoUtil.HashSha256(configBytes)).Replace("-", string.Empty);
-        database.CustomData.Set("certmultiaccess.config.hash", hash);
+        database.CustomData.Set($"{ConfigPrefix}.config.hash", hash);
     }
 
     public void SetModified()
@@ -179,5 +178,21 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
     {
         using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         XmlUtilEx.Serialize(fs, config);
+    }
+
+
+    internal void DatabaseFileCreated(PwDatabase database)
+    {
+        var path = database.IOConnectionInfo.Path;
+        if (_temporaryCreatedConfigs.ContainsKey(path))
+        {
+            SaveCertificatesConfig(_temporaryCreatedConfigs[path], database);
+            _temporaryCreatedConfigs.Remove(path);
+        }
+    }
+
+    internal void AddTemporaryCreatedConfig(string dbpath, CertProviderConfiguration certProviderConfig)
+    {
+        _temporaryCreatedConfigs[dbpath] = certProviderConfig;
     }
 }

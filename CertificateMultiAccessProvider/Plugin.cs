@@ -33,11 +33,24 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
 
         _provider = new(host);
         _host = host;
-        _host.MainWindow.FileSaving += this.FileSaving;
         _host.MainWindow.FileOpened += this.FileOpened;
+        _host.MainWindow.FileCreated += this.FileCreated;
+        _host.MainWindow.MasterKeyChanged += this.MasterKeyChanged;
         _host.KeyProviderPool.Add(_provider);
 
         return true;
+    }
+
+    private void MasterKeyChanged(object sender, MasterKeyChangedEventArgs e)
+    {
+    }
+
+    private void FileCreated(object sender, FileCreatedEventArgs e)
+    {
+        if (e.Database.IsOpen)
+        {
+            _provider.DatabaseFileCreated(e.Database);
+        }
     }
 
     private void FileOpened(object sender, FileOpenedEventArgs e)
@@ -45,13 +58,6 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
         _provider.ValidateConfig(e.Database);
     }
 
-    private void FileSaving(object sender, KeePass.Forms.FileSavingEventArgs e)
-    {
-        if (e.Database.IsOpen)
-        {
-            _provider.SaveCertificatesConfig(e.Database);
-        }
-    }
 
     /// <summary>
     /// The <c>Terminate</c> method is called by KeePass when
@@ -91,16 +97,9 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
             return;
         }
 
-        var databasePath = UrlUtil.StripExtension(_host.Database.IOConnectionInfo.Path);
+        var _certProviderConfig = _provider.ReadCertificatesConfig(_host.Database);
 
-        if (string.IsNullOrWhiteSpace(databasePath))
-        {
-            databasePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Database");
-        }
-
-        var keyFilePath = databasePath + CertificateMultiAccessProvider.DefaultKeyExtension;
-
-        using var form = new KeyManagementForm(keyFilePath, _provider._certProviderConfig, _provider, false);
+        using var form = new KeyManagementForm(_provider, _certProviderConfig, _host.Database);
         form.ShowDialog();
     }
 }
