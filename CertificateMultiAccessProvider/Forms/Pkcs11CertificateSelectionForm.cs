@@ -170,6 +170,7 @@ public partial class Pkcs11CertificateSelectionForm : Form
         if (ofd.ShowDialog() == DialogResult.OK)
         {
             textBoxLibraryPath.Text = ofd.FileName;
+            LoadPKCS11Library();
         }
     }
 

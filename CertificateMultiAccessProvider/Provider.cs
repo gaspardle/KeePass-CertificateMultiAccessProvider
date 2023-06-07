@@ -1,5 +1,7 @@
 using System.Security.Cryptography.X509Certificates;
+using CertificateMultiAccessProvider.CertProvider;
 using CertificateMultiAccessProvider.CertStore;
+using KeePass.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
 using KeePassLib;
@@ -28,6 +30,7 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
     private readonly IPluginHost _host;
 
     private readonly Dictionary<string, CertProviderConfiguration> _temporaryCreatedConfigs = new();
+    private readonly HashSet<string> _openedDb = new();
 
     public CertificateMultiAccessProvider(IPluginHost host)
     {
@@ -75,13 +78,13 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         //capi
         if (Settings.UseCAPIByDefault && _certProviderConfig.AllowedCertificates.Any(k => k is AllowedCertificateRSA))
         {
-            cert = CertStoreCAPI.SelectCertificate("Select a certificate.", _certProviderConfig.AllowedCertificates.Select(k => k.Thumbprint), GlobalWindowManager.TopWindow?.Handle);
+            cert = CertStoreCAPI.SelectCertificate("Please select the certificate that you would like to use to unlock the database.", _certProviderConfig.AllowedCertificates.Select(k => k.Thumbprint).Reverse(), GlobalWindowManager.TopWindow?.Handle);
             type = CertProvType.CAPI;
         }
 
         if (cert == null)
         {
-            (cert, type) = CryptoHelpers.ShowCertificateSelection("Select a current valid certificate.", _certProviderConfig, Settings);
+            (cert, type) = CryptoHelpers.ShowCertificateSelection("Please select the certificate that you would like to use to unlock the database.", _certProviderConfig, Settings);
         }
 
         if (cert == null)
@@ -105,9 +108,10 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         {
             secretKey = CryptoHelpers.DecryptSecretFromConfig(certInfo, type, Settings);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw;
+            MessageService.ShowFatal(ex);
+            return null;
         }
         finally
         {
@@ -115,34 +119,56 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         }
 
         if (secretKey == null) return null;
+
+        _openedDb.Add(ctx.DatabasePath);
         return secretKey.ReadData();
     }
 
     internal CertProviderConfiguration ReadCertificatesConfig(PwDatabase database)
     {
         var compressedBytes = database.PublicCustomData.GetByteArray($"{ConfigPrefix}.config");
-
         if (compressedBytes == null) return null;
 
-        using var memoryStream = new MemoryStream(compressedBytes);
-        var configBytes = MemUtil.Decompress(memoryStream.ToArray());
-
-        var certProviderConfig = XmlUtilEx.Deserialize<CertProviderConfiguration>(new MemoryStream(configBytes));
-        return certProviderConfig;
+        try
+        {
+            using var memoryStream = new MemoryStream(compressedBytes);
+            var configBytes = MemUtil.Decompress(memoryStream.ToArray());
+            var certProviderConfig = XmlUtilEx.Deserialize<CertProviderConfiguration>(new MemoryStream(configBytes));
+            return certProviderConfig;
+        }
+        catch (Exception ex)
+        {
+            MessageService.ShowFatal(ex);
+            throw;
+        }
     }
 
     internal void SaveCertificatesConfig(CertProviderConfiguration certProviderConfig, PwDatabase database)
     {
         using var memoryStream = new MemoryStream();
-        XmlUtilEx.Serialize(memoryStream, certProviderConfig);
+        try
+        {
+            XmlUtilEx.Serialize(memoryStream, certProviderConfig);
 
-        var configBytes = memoryStream.ToArray();
-        var compressedBytes = MemUtil.Compress(configBytes);
+            var configBytes = memoryStream.ToArray();
+            var compressedBytes = MemUtil.Compress(configBytes);
 
-        database.PublicCustomData.SetByteArray($"{ConfigPrefix}.config", compressedBytes);
+            database.PublicCustomData.SetByteArray($"{ConfigPrefix}.config", compressedBytes);
 
-        var hash = BitConverter.ToString(CryptoUtil.HashSha256(configBytes)).Replace("-", string.Empty);
-        database.CustomData.Set($"{ConfigPrefix}.config.hash", hash);
+            var hash = BitConverter.ToString(CryptoUtil.HashSha256(configBytes)).Replace("-", string.Empty);
+            database.CustomData.Set($"{ConfigPrefix}.config.hash", hash);
+        }
+        catch (Exception ex)
+        {
+            MessageService.ShowFatal(ex);
+            return;
+        }
+    }
+
+    internal void RemoveCertificatesConfig(PwDatabase database)
+    {
+        database.PublicCustomData.Remove($"{ConfigPrefix}.config");
+        database.CustomData.Remove($"{ConfigPrefix}.config.hash");
     }
 
     public void SetModified()
@@ -171,7 +197,6 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
     {
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
         return XmlUtilEx.Deserialize<CertProviderConfiguration>(fs);
-
     }
 
     internal static void ExportConfig(string path, CertProviderConfiguration config)
@@ -180,8 +205,12 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
         XmlUtilEx.Serialize(fs, config);
     }
 
+    internal void OnFileClosed(string path, FileEventFlags flag)
+    {
+        _openedDb.Remove(path);
+    }
 
-    internal void DatabaseFileCreated(PwDatabase database)
+    internal void OnDatabaseFileCreated(PwDatabase database)
     {
         var path = database.IOConnectionInfo.Path;
         if (_temporaryCreatedConfigs.ContainsKey(path))
@@ -194,5 +223,10 @@ public sealed class CertificateMultiAccessProvider : KeyProvider
     internal void AddTemporaryCreatedConfig(string dbpath, CertProviderConfiguration certProviderConfig)
     {
         _temporaryCreatedConfigs[dbpath] = certProviderConfig;
+    }
+
+    internal bool IsDatabaseOpen(string path)
+    {
+        return _openedDb.Contains(path);
     }
 }

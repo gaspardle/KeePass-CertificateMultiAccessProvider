@@ -2,6 +2,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using CertificateMultiAccessProvider.CertProvider;
 using CertificateMultiAccessProvider.CertStore;
 using KeePass.App;
 using KeePass.UI;
@@ -19,7 +20,7 @@ public partial class KeyManagementForm : Form
     private ProtectedBinary _secretKey;
     //private readonly CertProviderConfiguration _certProviderConfig;
     private readonly bool _isKeyCreation = false;
-    private readonly bool _allowNotSecureRemoval = false;
+    private readonly bool _allowInsecureRemoval = false;
     private readonly CertificateMultiAccessProvider _provider;
     private string _keyFileDefaultLocation;
     private readonly PwDatabase _database;
@@ -73,8 +74,6 @@ public partial class KeyManagementForm : Form
 
     private void RefreshList()
     {
-        if (CertProviderConfig.AllowedCertificates.Count == 0) return;
-
         listViewCertificate.BeginUpdate();
         listViewCertificate.Items.Clear();
         listViewCertificate.ListViewItemSorter = null;
@@ -150,7 +149,7 @@ public partial class KeyManagementForm : Form
 
     private void AddCertFromStoreButton_Click(object sender, EventArgs e)
     {
-        var certificate = CertStoreCAPI.SelectCertificate("Select the certificate to add as an authentication method.", hwnd: this.Handle);
+        var certificate = CertStoreCAPI.SelectCertificate("Please select the certificate that you would like to add.", hwnd: this.Handle);
         if (certificate == null) return;
 
         if (CertProviderConfig.AllowedCertificates.Any(p => p.Thumbprint == certificate.Thumbprint))
@@ -159,22 +158,7 @@ public partial class KeyManagementForm : Form
             return;
         }
 
-        RSA rsa;
-        if ((rsa = certificate.GetRSAPublicKey()) != null)
-        {
-            if (rsa.KeySize < 2048)
-            {
-                MessageService.ShowWarning("Certificates which the key size are lesser than 2048 bits are not supported.");
-                return;
-            }
-        }
-
-        if (!GetSecretKey())
-        {
-            return;
-        }
-
-        Add(AllowedCertificateRSA.Create(certificate, AllowedRSAEncryptionPadding.GetFromName(_provider.Settings.DefaultRsaPaddingName)));
+        AddCertificate(certificate);
     }
 
     private void ButtonAddPkcs11_Click(object sender, EventArgs e)
@@ -193,31 +177,35 @@ public partial class KeyManagementForm : Form
                 MessageBox.Show("Certificate is already present.");
                 return;
             }
-            Add(AllowedCertificateRSA.Create(certificate, AllowedRSAEncryptionPadding.GetFromName(_provider.Settings.DefaultRsaPaddingName)));
+            AddCertificate(certificate);
         }
     }
 
-    private void AddCertInternalButton_Click(object sender, EventArgs e)
+    private void AddCertificate(X509Certificate2 certificate)
     {
-        var form = new PasswordDialog("", true);
-        var dialogResult = form.ShowDialog();
-        var passphrase = form.Passphrase;
-        var subject = form.Subject;
-
-        if (passphrase == null || passphrase.Length == 0)
+        switch (certificate.GetKeyAlgorithm())
         {
-            MessageService.ShowWarning("The password is not valid.");
-            return;
-        }
-
-        if (dialogResult == DialogResult.OK && passphrase.Length > 0)
-        {
-            var newCertificate = CryptoHelpers.GenerateSelfSignedCertificate(subject);
-            Add(AllowedCertificateRSAInternal.Create(newCertificate, passphrase));
+            case "1.2.840.113549.1.1.1": //rsa
+                if ((certificate.GetRSAPublicKey()) is RSA rsa)
+                {
+                    if (rsa.KeySize < 2048)
+                    {
+                        MessageService.ShowWarning("Certificates with a key size lesser than 2048 bits are not supported.");
+                        return;
+                    }
+                }
+                AddAllowedCertificateToConfig(AllowedCertificateRSA.Create(certificate, AllowedRSAEncryptionPadding.GetFromName(_provider.Settings.DefaultRsaPaddingName)));
+                break;
+            case "1.2.840.10045.2.1": //ecc
+                MessageService.ShowWarning("EC certificate are not supported");
+                break;
+            default:
+                MessageService.ShowWarning("Certificate's key type not supported");
+                break;
         }
     }
 
-    private void Add(AllowedCertificate certInfo)
+    private void AddAllowedCertificateToConfig(AllowedCertificate certInfo)
     {
         if (!GetSecretKey())
         {
@@ -311,28 +299,35 @@ public partial class KeyManagementForm : Form
 
     private void RemoveCertButton_Click(object sender, EventArgs e)
     {
-        if (!_isKeyCreation && !_allowNotSecureRemoval)
+        if (!_isKeyCreation && !_allowInsecureRemoval)
         {
-            MessageBox.Show("To remove a certificate, go to File -> Change master key", "CertificateMultiAccess");
+            MessageBox.Show("To remove a certificate or disable this plugin for this database, go to File -> Change master key", "CertificateMultiAccess");
             return;
         }
+
+        if (CertProviderConfig.AllowedCertificates.Count <= 1)
+        {
+            MessageService.ShowWarning("You must have at least one certificate in the list.");
+            return;
+        }
+
         if (listViewCertificate.SelectedIndices.Count == 0)
         {
             MessageBox.Show("No certificate selected", "CertificateMultiAccess");
             return;
         }
 
-        var item = (AllowedCertificate)listViewCertificate.SelectedItems[0]?.Tag;
-        if (item != null)
+        var certificateInfo = (AllowedCertificate)listViewCertificate.SelectedItems[0]?.Tag;
+        if (certificateInfo != null)
         {
-            var cert = item.ReadCertificate();
+            var certificate = certificateInfo.ReadCertificate();
             var result = MessageBox.Show($"Are you sure you want to remove from the access list this certificate?" +
-                $"\n\n - Subject: {cert.Subject}\n - Thumbprint: {cert.Thumbprint}", "CertificateMultiAccess",
+                $"\n\n - Subject: {certificate.Subject}\n - Thumbprint: {certificate.Thumbprint}", "CertificateMultiAccess",
                 MessageBoxButtons.YesNo);
 
             if (result == DialogResult.Yes)
             {
-                CertProviderConfig.AllowedCertificates.Remove(item);
+                CertProviderConfig.AllowedCertificates.RemoveAll(c => c.Thumbprint == certificate.Thumbprint);
                 RefreshList();
             }
         }
@@ -382,7 +377,7 @@ public partial class KeyManagementForm : Form
                 var config = CertificateMultiAccessProvider.ImportConfig(sfd.FileName);
                 foreach (var certInfo in config.AllowedCertificates)
                 {
-                    var newCertInfo = certInfo.Clone();
+                    var newCertInfo = certInfo.Copy();
                     if (!CertProviderConfig.AllowedCertificates.Any(c => c.Thumbprint == newCertInfo.Thumbprint))
                     {
                         CryptoHelpers.SetSecretKeyFromNewUserKey(newCertInfo, _secretKey);
@@ -403,7 +398,13 @@ public partial class KeyManagementForm : Form
 
     private void ExportBackingKey()
     {
-        MessageBox.Show("The exported file can be used as a key file for this database.", "Export key file", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        if (!_provider.Settings.AllowKeyExport)
+        {
+            MessageBox.Show("This feature is disabled.");
+            return;
+        }
+
+        MessageBox.Show("The exported file can be used as a key file for this database in place of a certificate. Store safely.", "Export key file", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
         var sfd = new SaveFileDialogEx("Export Key file")
         {
@@ -440,18 +441,41 @@ public partial class KeyManagementForm : Form
 
     private void ToolStripMenuItemCustomKey_Click(object sender, EventArgs e)
     {
-        var form = new PinDialog("(Experimental) Set Provider Key", "Set custom value for the key used in the database composite key, instead of a random value. (32 bytes hex)");
-        var dialogResult = form.ShowDialog();
-        ;
-        if (form.Pin != null && dialogResult == DialogResult.OK)
+        if (_isKeyCreation)
         {
-            var newKeyHex = form.Pin.ReadString();
-            var newKey = MemUtil.HexStringToByteArray(newKeyHex);
-            _secretKey = new ProtectedBinary(true, newKey);
-            MemUtil.ZeroByteArray(newKey);
+            var form = new PinDialog("(danger) Set Provider Key", "Set custom value for the key used in the database composite key, instead of a random value. (32 bytes hex)");
+            var dialogResult = form.ShowDialog();
+
+            if (form.Pin != null && dialogResult == DialogResult.OK)
+            {
+                var newKeyHex = form.Pin.ReadString();
+                var newKey = MemUtil.HexStringToByteArray(newKeyHex);
+                _secretKey = new ProtectedBinary(true, newKey);
+                MemUtil.ZeroByteArray(newKey);
+            }
         }
     }
 
+    private void toolStripMenuItemRemovedConfig_Click(object sender, EventArgs e)
+    {
+        if (!_provider.Settings.AllowConfigurationRemoval)
+        {
+            MessageBox.Show("This feature is disabled.");
+            return;
 
+        }
+        if (_database != null)
+        {
+            var result = MessageBox.Show($"(danger) Are you sure you want to remove the plugin configuration from this database?" +
+               $"\n\n{_database.IOConnectionInfo.Path}", "CertificateMultiAccess",
+               MessageBoxButtons.YesNo);
+
+            if (result == DialogResult.Yes)
+            {
+                _provider.RemoveCertificatesConfig(_database);
+                DialogResult = DialogResult.OK;
+            }
+        }
+    }
 }
 

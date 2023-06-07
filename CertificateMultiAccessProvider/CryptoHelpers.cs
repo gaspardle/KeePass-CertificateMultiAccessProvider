@@ -1,5 +1,6 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using CertificateMultiAccessProvider.CertProvider;
 using CertificateMultiAccessProvider.CertStore;
 using KeePassLib.Cryptography;
 using KeePassLib.Cryptography.Cipher;
@@ -14,6 +15,8 @@ public static class CryptoHelpers
 
     public record AllowedRSAEncryptionPadding(RSAEncryptionPadding Value, string Name, string DisplayName)
     {
+        public AllowedRSAEncryptionPadding() : this(RSAEncryptionPadding.OaepSHA256, "OAEPSHA256", "OAEP SHA256") { }
+
         public static AllowedRSAEncryptionPadding[] List { get; } =
             new[]
             {
@@ -93,11 +96,7 @@ public static class CryptoHelpers
     public static ProtectedBinary DecryptSecretFromConfig(AllowedCertificate certInfo, CertProvType providerType, Settings settings)
     {
         ICertStoreProvider certStoreProv;
-        if (providerType == CertProvType.InternalCertificate && certInfo is AllowedCertificateRSAInternal)
-        {
-            certStoreProv = new CertStoreInternal();
-        }
-        else if (providerType == CertProvType.Pkcs11)
+        if (providerType == CertProvType.Pkcs11)
         {
             certStoreProv = new CertStorePkcs11(settings.Pkcs11LibPath);
         }

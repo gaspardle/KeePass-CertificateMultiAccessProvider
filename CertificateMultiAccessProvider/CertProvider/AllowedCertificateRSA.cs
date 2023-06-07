@@ -1,15 +1,28 @@
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Xml.Serialization;
 using KeePassLib.Security;
 using static CertificateMultiAccessProvider.CryptoHelpers;
 
-namespace CertificateMultiAccessProvider;
+namespace CertificateMultiAccessProvider.CertProvider;
 
-public class AllowedCertificateRSA : AllowedCertificate
+public record AllowedCertificateRSA : AllowedCertificate
 {
     public const int CurrentVersion = 1;
-    public string RSAEncryptionPaddingName { get; set; }
 
+    public string RSAEncryptionPaddingName { get; /*private*/ set; }
+
+
+    [XmlIgnore]
+    internal AllowedRSAEncryptionPadding RSAEncryptionPadding
+    {
+        get { return AllowedRSAEncryptionPadding.GetFromNameOrDefault(RSAEncryptionPaddingName); }
+        init
+        {
+            RSAEncryptionPaddingName = value.Name;
+        }
+    }
 
     public AllowedCertificateRSA() { }
 
@@ -22,22 +35,16 @@ public class AllowedCertificateRSA : AllowedCertificate
             Version = CurrentVersion,
             Certificate = certificate.Export(X509ContentType.Cert),  // public part only       
             Thumbprint = certificate.Thumbprint,
-            RSAEncryptionPaddingName = rsaEncryptionPadding.Name
+            RSAEncryptionPadding = rsaEncryptionPadding
         };
     }
 
-    public AllowedRSAEncryptionPadding RSAEncryptionPadding => AllowedRSAEncryptionPadding.GetFromNameOrDefault(RSAEncryptionPaddingName);
-
-    public override AllowedCertificate Clone()
+    public override AllowedCertificate Copy()
     {
-        return new AllowedCertificateRSA()
-        {
-            Certificate = Certificate,
-            Thumbprint = this.Thumbprint,
-            RSAEncryptionPaddingName = this.RSAEncryptionPaddingName,
-        };
+        return this with { };
     }
 
+    [Obsolete]
     internal override void SetSecret(ProtectedBinary randomKey, byte[] iv, byte[] encryptedData)
     {
         RSA rsa;

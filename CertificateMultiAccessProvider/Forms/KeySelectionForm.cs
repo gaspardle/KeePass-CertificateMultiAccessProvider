@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography.X509Certificates;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
+using CertificateMultiAccessProvider.CertProvider;
 using KeePass.App;
 using KeePass.UI;
 
@@ -138,7 +140,7 @@ public partial class KeySelectionForm : Form
     private void OpenCertificate(AllowedCertificate certificateInfo)
     {
         SelectedCertificate = certificateInfo.ReadCertificate();
-        SelectedType = certificateInfo is AllowedCertificateRSAInternal ? CertProvType.InternalCertificate : CertProvType.CAPI;
+        SelectedType = CertProvType.CAPI;
         DialogResult = DialogResult.OK;
     }
 

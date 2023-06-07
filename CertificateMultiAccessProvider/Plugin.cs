@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using CertificateMultiAccessProvider.Forms;
 using KeePass.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
@@ -36,6 +37,7 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
         _host.MainWindow.FileOpened += this.FileOpened;
         _host.MainWindow.FileCreated += this.FileCreated;
         _host.MainWindow.MasterKeyChanged += this.MasterKeyChanged;
+        _host.MainWindow.FileClosed += this.FileClosed;
         _host.KeyProviderPool.Add(_provider);
 
         return true;
@@ -49,7 +51,7 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
     {
         if (e.Database.IsOpen)
         {
-            _provider.DatabaseFileCreated(e.Database);
+            _provider.OnDatabaseFileCreated(e.Database);
         }
     }
 
@@ -58,6 +60,10 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
         _provider.ValidateConfig(e.Database);
     }
 
+    private void FileClosed(object sender, FileClosedEventArgs e)
+    {
+        _provider.OnFileClosed(e.IOConnectionInfo.Path, e.Flags);
+    }
 
     /// <summary>
     /// The <c>Terminate</c> method is called by KeePass when
@@ -66,7 +72,20 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
     /// </summary>
     public override void Terminate()
     {
+        if (_host == null)
+        {
+            return;
+        }
+
+        _host.MainWindow.FileOpened -= this.FileOpened;
+        _host.MainWindow.FileCreated -= this.FileCreated;
+        _host.MainWindow.MasterKeyChanged -= this.MasterKeyChanged;
+        _host.MainWindow.FileClosed -= this.FileClosed;
+
         _host.KeyProviderPool.Remove(_provider);
+
+        _provider = null;
+        _host = null;
     }
 
     /// <summary>
@@ -81,9 +100,20 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
         {
             var tsmi = new ToolStripMenuItem
             {
-                Text = "CertificateMultiAccess - Settings...",
+                Text = "CertificateMultiAccess",
+                Image = _host.MainWindow.ClientIcons.Images[(int)PwIcon.Certificate]
             };
-            tsmi.Click += OnOptionsClicked;
+
+            var settingsSubMenuItem = new ToolStripMenuItem("Settings...");
+            settingsSubMenuItem.Image = _host.MainWindow.ClientIcons.Images[(int)PwIcon.Configuration];
+            settingsSubMenuItem.Click += OnOptionsClicked;
+            tsmi.DropDownItems.Add(settingsSubMenuItem);
+
+            var aboutSubMenuItem = new ToolStripMenuItem("About");
+            aboutSubMenuItem.Image = _host.MainWindow.ClientIcons.Images[(int)PwIcon.Info];
+            aboutSubMenuItem.Click += OnAboutClicked;
+            tsmi.DropDownItems.Add(aboutSubMenuItem);
+
             return tsmi;
         }
         return null;
@@ -93,13 +123,29 @@ public sealed class CertificateMultiAccessProviderExt : Plugin
     {
         if (!_host.Database.IsOpen)
         {
-            MessageBox.Show("No database open");
+            MessageBox.Show("No database open.");
+            return;
+        }
+
+        if (!_provider.IsDatabaseOpen(_host.Database.IOConnectionInfo.Path))
+        {
+            MessageBox.Show($"This database is not using {Version.Name}.");
             return;
         }
 
         var _certProviderConfig = _provider.ReadCertificatesConfig(_host.Database);
+        if (_certProviderConfig == null)
+        {
+            return;
+        }
 
         using var form = new KeyManagementForm(_provider, _certProviderConfig, _host.Database);
         form.ShowDialog();
+    }
+
+    private void OnAboutClicked(object sender, EventArgs e)
+    {
+        var about = new About();
+        about.ShowDialog(_host.MainWindow);
     }
 }

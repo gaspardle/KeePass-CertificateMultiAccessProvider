@@ -9,8 +9,8 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Certificate MultiAcess Provider")]
-[assembly: AssemblyDescription("Provides a way to open the KeePass key-chain with an X509 certificate.")]
+[assembly: AssemblyTitle(Version.Name)]
+[assembly: AssemblyDescription("A plugin that allows to open the KeePass database with an X.509 certificate.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("KeePass Plugin")]
@@ -43,5 +43,6 @@ using System.Runtime.InteropServices;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1050:Declare types in namespaces", Justification = "Unnecessary")]
 public static class Version
 {
-    public const string Number = "1.0.0.1";
+    public const string Number = "0.8.0.1";
+    public const string Name = "Certificate MultiAcess Provider";
 }

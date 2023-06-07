@@ -23,7 +23,6 @@ namespace CertificateMultiAccessProvider
             this.addCertFromStoreButton = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.exportButton = new System.Windows.Forms.Button();
-            this.addCertInternalButton = new System.Windows.Forms.Button();
             this.listViewCertificate = new System.Windows.Forms.ListView();
             this.displayCertificateDetailsButton = new System.Windows.Forms.Button();
             this.removeCertButton = new System.Windows.Forms.Button();
@@ -34,6 +33,7 @@ namespace CertificateMultiAccessProvider
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItemExportKey = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItemCustomKey = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItemRemovedConfig = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -88,18 +88,6 @@ namespace CertificateMultiAccessProvider
             this.exportButton.Text = "Export config...";
             this.exportButton.UseVisualStyleBackColor = true;
             this.exportButton.Click += new System.EventHandler(this.ExportButton_Click);
-            // 
-            // addCertInternalButton
-            // 
-            this.addCertInternalButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.addCertInternalButton.Location = new System.Drawing.Point(11, 249);
-            this.addCertInternalButton.Name = "addCertInternalButton";
-            this.addCertInternalButton.Size = new System.Drawing.Size(156, 24);
-            this.addCertInternalButton.TabIndex = 20;
-            this.addCertInternalButton.Text = "Add internal certificate...";
-            this.addCertInternalButton.UseVisualStyleBackColor = true;
-            this.addCertInternalButton.Visible = false;
-            this.addCertInternalButton.Click += new System.EventHandler(this.AddCertInternalButton_Click);
             // 
             // listViewCertificate
             // 
@@ -189,23 +177,31 @@ namespace CertificateMultiAccessProvider
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripMenuItemExportKey,
-            this.toolStripMenuItemCustomKey});
+            this.toolStripMenuItemCustomKey,
+            this.toolStripMenuItemRemovedConfig});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(217, 48);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(224, 92);
             // 
             // toolStripMenuItemExportKey
             // 
             this.toolStripMenuItemExportKey.Name = "toolStripMenuItemExportKey";
-            this.toolStripMenuItemExportKey.Size = new System.Drawing.Size(216, 22);
+            this.toolStripMenuItemExportKey.Size = new System.Drawing.Size(223, 22);
             this.toolStripMenuItemExportKey.Text = "Export backing key as file...";
             this.toolStripMenuItemExportKey.Click += new System.EventHandler(this.ToolStripMenuItemExportKey_Click);
             // 
             // toolStripMenuItemCustomKey
             // 
             this.toolStripMenuItemCustomKey.Name = "toolStripMenuItemCustomKey";
-            this.toolStripMenuItemCustomKey.Size = new System.Drawing.Size(216, 22);
+            this.toolStripMenuItemCustomKey.Size = new System.Drawing.Size(223, 22);
             this.toolStripMenuItemCustomKey.Text = "Set custom key...";
             this.toolStripMenuItemCustomKey.Click += new System.EventHandler(this.ToolStripMenuItemCustomKey_Click);
+            // 
+            // toolStripMenuItemRemovedConfig
+            // 
+            this.toolStripMenuItemRemovedConfig.Name = "toolStripMenuItemRemovedConfig";
+            this.toolStripMenuItemRemovedConfig.Size = new System.Drawing.Size(223, 22);
+            this.toolStripMenuItemRemovedConfig.Text = "Remove embedded config...";
+            this.toolStripMenuItemRemovedConfig.Click += new System.EventHandler(this.toolStripMenuItemRemovedConfig_Click);
             // 
             // KeyManagementForm
             // 
@@ -215,7 +211,6 @@ namespace CertificateMultiAccessProvider
             this.ClientSize = new System.Drawing.Size(614, 316);
             this.Controls.Add(this.buttonMore);
             this.Controls.Add(this.buttonCancel);
-            this.Controls.Add(this.addCertInternalButton);
             this.Controls.Add(this.buttonAddPkcs11);
             this.Controls.Add(this.importButton);
             this.Controls.Add(this.removeCertButton);
@@ -245,7 +240,6 @@ namespace CertificateMultiAccessProvider
         private System.Windows.Forms.Button addCertFromStoreButton;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Button exportButton;
-        private Button addCertInternalButton;
         private ListView listViewCertificate;
         private Button displayCertificateDetailsButton;
         private Button removeCertButton;
@@ -256,5 +250,6 @@ namespace CertificateMultiAccessProvider
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem toolStripMenuItemExportKey;
         private ToolStripMenuItem toolStripMenuItemCustomKey;
+        private ToolStripMenuItem toolStripMenuItemRemovedConfig;
     }
 }

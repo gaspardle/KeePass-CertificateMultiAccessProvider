@@ -1,4 +1,4 @@
-﻿using KeePass.App;
+using KeePass.App;
 using KeePass.UI;
 using KeePassLib.Security;
 
@@ -21,7 +21,7 @@ public partial class PinDialog : Form
             MessageBox.Show("Can't be empty");
             return;
         }
-        
+
         this.Pin = securePassphraseTextBox.TextEx;
         DialogResult = DialogResult.OK;
     }

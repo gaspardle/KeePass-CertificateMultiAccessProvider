@@ -5,7 +5,7 @@ namespace CertificateMultiAccessProvider;
 public class Settings
 {
     private readonly AceCustomConfig _config;
-    public const string ConfigPrefix = "certmultiaccess";
+    public const string ConfigPrefix = "CertMultiAccess";
 
     public Settings(AceCustomConfig config)
     {
@@ -14,26 +14,38 @@ public class Settings
 
     public string Pkcs11LibPath
     {
-        get { return _config.GetString("Pkcs11LibPath"); }
-        set { _config.SetString("Pkcs11LibPath", value); }
+        get { return _config.GetString($"{ConfigPrefix}_Pkcs11LibPath"); }
+        set { _config.SetString($"{ConfigPrefix}_Pkcs11LibPath", value); }
     }
 
     public string DefaultRsaPaddingName
     {
-        get { return _config.GetString("DefaultRsaPaddingName", "OAEPSHA256"); }
-        set { _config.SetString("DefaultRsaPaddingName", value); }
+        get { return _config.GetString($"{ConfigPrefix}_DefaultRsaPaddingName", "OAEPSHA256"); }
+        set { _config.SetString($"{ConfigPrefix}_DefaultRsaPaddingName", value); }
     }
 
     public bool UseCAPIByDefault
     {
-        get { return _config.GetBool("UseCAPIByDefault", true); }
-        set { _config.SetBool("UseCAPIByDefault", value); }
+        get { return _config.GetBool($"{ConfigPrefix}_UseCAPIByDefault", true); }
+        set { _config.SetBool($"{ConfigPrefix}_UseCAPIByDefault", value); }
     }
 
     public bool AllowUnsecureDeletion
     {
-        get { return _config.GetBool("AllowUnsecureDeletion", false); }
-        set { _config.SetBool("AllowUnsecureDeletion", value); }
+        get { return _config.GetBool($"{ConfigPrefix}_AllowUnsecureDeletion", false); }
+        set { _config.SetBool($"{ConfigPrefix}_AllowUnsecureDeletion", value); }
+    }
+
+    public bool AllowKeyExport
+    {
+        get { return _config.GetBool($"{ConfigPrefix}_AllowKeyExport", true); }
+        set { _config.SetBool($"{ConfigPrefix}_AllowKeyExport", value); }
+    }
+
+    public bool AllowConfigurationRemoval
+    {
+        get { return _config.GetBool($"{ConfigPrefix}_AllowConfigurationRemoval", false); }
+        set { _config.SetBool($"{ConfigPrefix}_AllowConfigurationRemoval", value); }
     }
 
 }

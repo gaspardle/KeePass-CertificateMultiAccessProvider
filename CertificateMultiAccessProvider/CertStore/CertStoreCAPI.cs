@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using CertificateMultiAccessProvider.CertProvider;
 
 namespace CertificateMultiAccessProvider.CertStore;
 
